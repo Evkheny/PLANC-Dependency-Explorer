@@ -12,3 +12,6 @@ legacy/
 *.json
 *.cd.txt
 *.png
+
+# release packages (zip uploaded to the GitHub release)
+release/

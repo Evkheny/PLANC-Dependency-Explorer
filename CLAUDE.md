@@ -122,7 +122,10 @@ Model JSON keys: meta, components, signals, parameters, typeselections, edges, o
   1. Bump `__version__`.
   2. Commit and tag `vX.Y.Z`.
   3. Build the exe.
-  4. Create a GitHub release with the tag and attach `dist\PLANC_Dependency_Explorer.exe`.
+  4. Add a section to `RELEASE_NOTES.md`, then build `release\PLANC_Dependency_Explorer_vX.Y.Z.zip` containing the
+     exe, README.md and RELEASE_NOTES.md (PowerShell `Compress-Archive`; `release/` is git-ignored).
+  5. Create a GitHub release with the tag, paste that version's notes and attach the zip. The user pushes and publishes
+     the release themself, because Claude Code's auto mode blocks `git push`.
 - **Licence:** PyMuPDF is AGPL-3.0 or commercial (Artifex). The user has been told. The alternative is pypdf (BSD;
   about 60 s for a 1500-page PDF, and it has outlines via `reader.outline`).
 
