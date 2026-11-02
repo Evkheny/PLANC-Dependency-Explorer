@@ -1,0 +1,5 @@
+pymupdf>=1.24
+# build only
+pyinstaller>=6.0
+# tests/ui_smoke.py only
+pillow

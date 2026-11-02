@@ -1,0 +1,14 @@
+# build outputs (the .exe is published as a GitHub release asset, not committed)
+dist/
+build/
+*.spec
+.buildenv/
+__pycache__/
+*.pyc
+# never commit company data: PLANC models, Controller Description text, CoPaD exports, generated model JSON
+legacy/
+*.pdf
+*.csv
+*.json
+*.cd.txt
+*.png
