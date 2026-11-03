@@ -1,5 +1,27 @@
 # PLANC Dependency Explorer - Release notes
 
+## v1.1.0 (03-Nov-2026)
+
+### New
+- **Tuning overview of each function:** the overview table of its tuning task, as in the Jira OVTASK (Name, Main Scope,
+  Tuning KPI, Relevant DLCs, Highly affected functionalities, Highly affected by, Risk of not tuning). Tuning gates are
+  not shown. Open it from the new **Tuning overview** tab or by clicking the centre box of the graph.
+  - The text comes from a tuning knowledge base built into the tool (76 tasks). Text marked *(proposed)* must be
+    reviewed.
+  - It is completed with live data: the model links, with how each signal is used inside the consumer (main,
+    scheduling / auxiliary, event data); the type-dependent parameters and the A/B differences; and the load cases of
+    the project simulation that match each relevant DLC ("not simulated" when the project does not run it).
+  - **Copy for Jira** copies the table as Jira wiki markup.
+  - Functions with a tuning task are marked in the tree (column Tun.); filter "with tuning overview".
+- **Simulations (optional input):** add simulation folders in **Sources**. The first one is the project simulation.
+- **Load cases (DLCs) window**, the same as in SimStatsPlotter: the load cases of a simulation (wind, speeds,
+  simulations, PSF, ULS/FLS use, events), the card of each case and the comparison of simulations (new / removed /
+  changed cases, template differences), with export to Excel.
+
+### Changed
+- The model build also traces where each signal is used inside its consumers (about 15-25 s in total).
+- Rebuild the model after updating (**Build model**), so that the overview shows the signal roles.
+
 ## v1.0.0 (02-Nov-2026), first release
 
 A Windows desktop tool to navigate the PLANC controller (Simulink) and the dependencies between its functions. It

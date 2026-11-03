@@ -8,16 +8,21 @@ controller (Siemens Gamesa / Siemens Energy, Simulink) it shows, for every contr
 - the matching Controller Description section.
 
 Its main use is comparing two type values (e.g. two WTGType variants such as the 165 and the 170 rotor) to see which
-functions and parameters change.
+functions and parameters change. Since v1.1.0 it also shows the **tuning overview** of each function (the Jira OVTASK
+overview table, without gates) and the **load cases (DLCs)** of simulation folders.
 
 **Read `HISTORY.md` before changing anything.** It holds the decisions, the reference numbers and the pitfalls.
 
 ## Hard rules
-- **Only three inputs**, all of the same PLANC release. This was the user's decision on 02-Nov-2026; do not add others
-  (no Tuning Procedure, no manual maps, no project/planning files, no tuning-order output):
+- **Only three model inputs**, all of the same PLANC release. This was the user's decision on 02-Nov-2026; do not add
+  others (no Tuning Procedure, no manual maps, no project/planning files, no tuning-order output):
   1. the PLANC repo `Controller` folder;
   2. the Controller Description PDF;
   3. the CoPaD parameter-value export `parVal<version>.csv`.
+- **Plus, optional, simulation folders** (user, 03-Nov-2026): read only, the first is the project simulation whose DLCs
+  feed the tuning overview. The tuning knowledge base `tuning_kb.json` ships inside the tool (it is not an input).
+- **Tuning overview content:** physics, not workflows; no run or seed counts; no tuning gates; no platform names in
+  reasons. Dependencies are checked inside the slx (signal-use role), never assumed from names.
 - **The PLANC repo is READ ONLY.** Never write to it and never run git commands in it.
 - **Never commit company data:** no PDFs, CSV exports, model JSON, Controller Description text, screenshots, or the
   `legacy/` folder. `.gitignore` covers these; check `git status` before every commit.
@@ -30,14 +35,19 @@ functions and parameters change.
 |---|---|
 | `planc_model.py` | Scanner. `build(ctrl, cd, copad, progress)` returns the model dict. It can also run as a CLI (`python planc_model.py <Controller> --cd <pdf> --csv <csv> --out model.json`). |
 | `planc_explorer.py` | Tkinter UI, the `Explorer` class. `--build` does a headless rebuild from the saved config and writes `build.log`. Holds `__version__`. |
-| `build_exe.cmd` | Creates a `.buildenv` venv, pip-installs pyinstaller + pymupdf, builds `dist\PLANC_Dependency_Explorer.exe` (onefile, windowed). |
+| `overview.py` | Tuning overview: `tasks_for(comp)`, `dlc_items` / `match_dlcs` / `dlc_rows` (KB DLC codes → simulation folders), `links` (model links with role), `type_params`, `jira_markup`. |
+| `tuning_kb.json` | Tuning knowledge base: 76 tasks `{key, name, comp, cd, subarea, scope, kpi, dlcs, affects, affected_by, risk, workflow}` built from the SG5.2-170-HCF tuning sheets (gates and project-only sentences removed; `workflow` is not shown). Markup: `**bold**`, `- ` bullets, `[P]` = proposed. `comp` is None for 6 tasks. Bundled in the exe (`--add-data`). |
+| `slx_trace.py` | `Slx(path).first_users(inport)`: the first blocks that use a root inport inside a component (through Goto/From, subsystems and library links). |
+| `dlcsetup.py`, `dlcview.py`, `screen_fit.py` | Copied from `D:\PYTHON_functions_epm\SimStatsPlotter` (keep in sync): load-case reader and the Load cases window. |
+| `dlc_inputs.py`, `dlc_viewutil.py` | The numpy-free parts of SimStatsPlotter `extremes.py` / `loadcalc.py` (ULS/FLS input readers) and `viewutil.py` (`help_layout`, `tree`). |
+| `build_exe.cmd` | Creates a `.buildenv` venv, pip-installs pyinstaller + pymupdf + openpyxl, builds `dist\PLANC_Dependency_Explorer.exe` (onefile, windowed, with `tuning_kb.json`). |
 | `run_explorer.cmd` | Runs from source with `pythonw`. |
-| `tests/ui_smoke.py` | Drives the UI and saves 3 screenshots (needs pillow and an existing model). |
-| `requirements.txt` | pymupdf (runtime), pyinstaller (build), pillow (test). |
+| `tests/ui_smoke.py` | Drives the UI and saves 6 screenshots with PrintWindow (works behind other windows; needs pillow and an existing model; ui4-ui6 = overview tab, overview window, Load cases). |
+| `requirements.txt` | pymupdf, openpyxl (runtime), pyinstaller (build), pillow (test). |
 | `legacy/` | Local only, git-ignored: the first, project-specific version. Not used. |
 
-User data: `%APPDATA%\PLANC_Dependency_Explorer\`, which holds `config.json` (paths and compare choice), `planc_model.json`
-(cache) and `build.log`.
+User data: `%APPDATA%\PLANC_Dependency_Explorer\`, which holds `config.json` (paths, `sims` list and compare choice),
+`planc_model.json` (cache), `dlccache\` (load cases read from the simulations) and `build.log`.
 
 ## How the model is built (`planc_model.build`)
 
@@ -90,7 +100,14 @@ functions), located by the CD sections whose tokens contain them.
 
 **12. `meta.type_values`.** The list of type values per type selection, taken from CoPaD; it feeds the A/B comboboxes.
 
-Model JSON keys: meta, components, signals, parameters, typeselections, edges, outside_model_params, cd.
+**13. `trace_signal_use`** (v1.1.0). For every link and signal, `slx_trace.Slx(consumer).first_users(signal)` gives the
+first blocks that use it; `edge['use'][sig]` keeps up to 4 `"path: block"`, and `classify_use` sets `edge['role'][sig]`
+from the innermost path segment + block name only (the full path gave false hits, e.g. ESFE "frequenc"):
+`event data` (event/alarm/warning/reason), `scheduling / auxiliary` (notch, nP, frequency, gain scheduling, scaling,
+selector, status...), `main`, or `not traced`.
+
+Model JSON keys: meta, components, signals, parameters, typeselections, edges (with `use` and `role`),
+outside_model_params, cd.
 
 ## UI (`Explorer`)
 - **Left:** a search box (function, short name, signal, parameter, or an exact STC1 Par) and a tree grouped by subarea.
@@ -106,6 +123,12 @@ Model JSON keys: meta, components, signals, parameters, typeselections, edges, o
   - Signals: double-click jumps to the peer.
   - Type selections.
   - Description: model data plus CD section, chapter, page and intro.
+- **Tuning overview** (first tab, and a window when the centre box is clicked): `ov_frame` / `fill_overview` /
+  `render_overview`. Task combobox: tasks of the function, then the tasks not tied to one function. DLC names are links
+  to a card (`dlc_card`); function names navigate. "Copy for Jira" = `overview.jira_markup`.
+- **Simulations:** Sources panel listbox (`self.sims`, saved in config). `load_project_sim` reads the first one in a
+  thread (`dlcsetup.load_sim`, cache `dlccache`); `self.loaded` (label → SimDlcs) is shared with the Load cases window
+  (`DlcWindow`, a subclass of `dlcview.DlcWindow` that also adds new folders to the list and refreshes the overview).
 - **Top right:** compare type selection, value A, value B. These are saved in config.
 - **Threading:** the build runs in a thread, and status updates go through `self.after`.
 - **DPI:** the process is made DPI-aware (`SetProcessDpiAwareness(1)`).
@@ -113,7 +136,8 @@ Model JSON keys: meta, components, signals, parameters, typeselections, edges, o
 ## Build, test, release
 - **Run from source:** `pip install pymupdf`, then `python planc_explorer.py`.
 - **Exe:** run `build_exe.cmd`. pymupdf 2.x pulls numpy, onnxruntime, pymupdf4llm and pymupdf_layout; they are excluded
-  in PyInstaller because `import pymupdf` does not need them. The result is about 32 MB.
+  in PyInstaller because `import pymupdf` does not need them. `tuning_kb.json` is added with `--add-data` (read through
+  `sys._MEIPASS`). The result is about 37 MB.
 - **Verify after changes:**
   1. Headless build: `dist\PLANC_Dependency_Explorer.exe --build`, then read `%APPDATA%\PLANC_Dependency_Explorer\build.log`.
      It must start with `OK` and give the reference numbers in HISTORY.md for the same release.

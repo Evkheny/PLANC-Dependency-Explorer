@@ -1,4 +1,6 @@
 pymupdf>=1.24
+# load-case (DLC) exchange sheets
+openpyxl
 # build only
 pyinstaller>=6.0
 # tests/ui_smoke.py only

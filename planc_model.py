@@ -217,6 +217,56 @@ def cd_section_for(name, short, cds):
     return best if score >= 0.6 else None
 
 
+# ---------------------------------------------------------------------------------------------------------- signal use
+_AUX = re.compile(r'(notch|track|npfrq|frq|frequenc|3p|6p|9p|1p|gainsch|scheduling|scaling|activation|'
+                  r'leadfactor|selector|status|compareto|azimuthshift|deadband)', re.I)
+_EVENT = re.compile(r'(event|alarm|warning|reason)', re.I)
+
+
+def classify_use(uses):
+    """Heuristic role of a signal in its consumer, from the first blocks that use it: 'event data' (only alarm / event
+    logging), 'scheduling / auxiliary' (gain scheduling, nP frequency of filters, activation, status) or 'main'."""
+    if not uses:
+        return 'not traced'
+    last = [u.split('/')[-1].replace(' ', '').replace('-', '') for u in uses]     # innermost subsystem + block only
+    if all(_EVENT.search(u) for u in last):
+        return 'event data'
+    if all(_AUX.search(u) or _EVENT.search(u) for u in last):
+        return 'scheduling / auxiliary'
+    return 'main'
+
+
+def trace_signal_use(ctrl, comps, edges, progress=None):
+    """For every link, where each signal is first used inside the consumer (subsystem path: first functional block):
+    edge['use'] = {signal: [..]}, edge['role'] = {signal: classify_use(..)}. Read only."""
+    from slx_trace import Slx
+    by_dst = collections.defaultdict(list)
+    for e in edges:
+        by_dst[e['dst']].append(e)
+    for i, (dst, es) in enumerate(sorted(by_dst.items())):
+        if i % 20 == 0:
+            _say(progress, f'Tracing signal use {i}/{len(by_dst)}...')
+        try:
+            s = Slx(os.path.join(ctrl, comps[dst]['path']))
+        except Exception:
+            s = None
+        for e in es:
+            e['use'], e['role'] = {}, {}
+            for sig in e['signals']:
+                uses = []
+                try:
+                    fu = s.first_users(sig) if s else []
+                except Exception:
+                    fu = []
+                for p, n, port, t in fu:
+                    if t == 'DataTypeConversion' or n.startswith(('Data Type Conversion', 'Convert to Simulink')):
+                        continue
+                    p2 = '/'.join(p.split('/')[2:]) or p
+                    uses.append(f"{p2}: {n.strip()}".replace('\n', ' '))
+                e['use'][sig] = uses[:4]
+                e['role'][sig] = classify_use(uses[:4])
+
+
 # ---------------------------------------------------------------------------------------------------------- build
 def build(ctrl, cd=None, copad=None, progress=None):
     _say(progress, 'Reading Shared/*.xml...')
@@ -271,6 +321,8 @@ def build(ctrl, cd=None, copad=None, progress=None):
                 if a != b and kind[b] != 'harness':
                     E[(a, b)].append(s)
     edges = [dict(src=a, dst=b, signals=sorted(v)) for (a, b), v in sorted(E.items())]
+    _say(progress, 'Tracing where each signal is used inside its consumers...')
+    trace_signal_use(ctrl, {c['name']: c for c in comps}, edges, progress)
     sigs = {s: dict(sig.get(s, {}), producers=sorted(prod.get(s, [])), consumers=sorted(cons.get(s, [])))
             for s in sorted(set(prod) | set(cons))}
     used = sorted(set().union(*[set(c['parameters']) for c in comps])) if comps else []

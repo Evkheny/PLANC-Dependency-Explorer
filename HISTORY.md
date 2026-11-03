@@ -3,9 +3,10 @@
 Read together with `CLAUDE.md`. Section 0 is the current state; then the timeline, decisions, reference numbers, domain
 knowledge and ideas.
 
-## 0. Current state (02-Nov-2026)
-- **Version 1.0.0** is ready for the first GitHub release. The exe was built and tested: the headless `--build` passes,
-  and the UI screenshots are OK.
+## 0. Current state (03-Nov-2026)
+- **Version 1.1.0** (local commit, not pushed): tuning overview per function + load cases (DLCs) of simulation folders.
+  Exe built and tested (starts, shows the overview with the project DLCs); headless build OK; smoke test OK.
+- **Version 1.0.0** was released on GitHub on 02-Nov-2026.
 - **Repository:** the user's personal GitHub. The `.exe` goes in the release assets; company data is never committed.
 - **Open points:**
   - PyMuPDF licence (AGPL or commercial) vs company rules; pypdf is the fallback.
@@ -45,6 +46,21 @@ type values.
   - PyInstaller onefile exe.
 - **02-Nov-2026:** the tool moved to `D:\PYTHON_functions_epm\PLANC_Dependency_Explorer`, plus CLAUDE.md, HISTORY.md, the
   smoke test and the git repo.
+- **03-Nov-2026, v1.1.0. The user's request:** add the Overview table of each tuning task (as in the Jira OVTASKs and the
+  Word document `Tuning_Task_Sheets_SG5.2-170-HCF.docx` of the SG5.2-170-HCF project), shown when clicking the box of a
+  function, without the tuning gates; add the simulation path(s) as the only new input, with the same DLC detail and
+  comparison as SimStatsPlotter; the project DLCs feed the Relevant DLCs of the overview.
+  - The overview text comes from a knowledge base built into the tool (`tuning_kb.json`, from the project's
+    `tools/tuning_sheets/content_*.py`), not from a new input. Removed from it: gates, sources, sentences that compare
+    project reference types or name open points of the project, and the plan notes. The `workflow` field is kept in the
+    file but not shown (the user does not want workflow references).
+  - The tool adds what is live: the model links with the role of each signal inside the consumer (traced in the slx),
+    the CoPaD A/B differences and the matching load cases of the simulations.
+  - SimStatsPlotter's `dlcsetup.py` / `dlcview.py` / `screen_fit.py` are copied unchanged except the imports; the numpy
+    parts of `extremes.py` / `loadcalc.py` / `viewutil.py` are left out (`dlc_inputs.py`, `dlc_viewutil.py`), so the exe
+    stays without numpy.
+  - DLC matching: KB codes such as `1.2a`, `2.4a/b`, `3.x` (any 3.*), `1.7` (→ 1.7p/1.7q when there is no plain 1.7);
+    post-processing (extrapolation) cases are skipped; codes not in the project are shown "not simulated".
 
 ## 3. Reference numbers (PLANC 173.0.0.1 repo state of 02-Nov-2026, CD 170.0.0.1, `parVal173.0.0.1.csv`)
 Use these to check that a change did not break the scanner. Counts change with other releases.
@@ -82,7 +98,15 @@ Use these to check that a change did not break the scanner. Counts change with o
 For 165 (`Ge_04800`) vs 170 (`Ge_07000`): 61 of 70 parameters of PitchTrajectoryTables differ, and 17 of the 22 of
 SpeedPitchController.
 
-**Timing:** the exe build takes about 24 s on the author's PC. The exe is about 32 MB.
+**Signal-use roles (v1.1.0):** main 1333, scheduling / auxiliary 330, event data 61, not traced 3. Checks: ADTD2,
+BladeLoadLimiter and TTCC use RotSpdFi_Spd as auxiliary; ESFE uses it as main; OverspeedMonitor and TwrVibMon use
+PitchRefCollective as event data. The full rebuild with tracing takes about 15-25 s.
+
+**Load cases (v1.1.0):** `S:\LR\SG5X\MkIB\70_170\SG5XMkIB70170LR20a`: 71 load cases (4 post-processing), 5 ULS and
+8 FLS inputs, about 10 s from S: (then cached). OVTASK-121: 1.2a → DLC12a x2; 1.4/9.4w → DLC14_ECD_SS, DLC94w; OVTASK-125:
+9.4c not simulated.
+
+**Timing:** the exe build takes about 90 s on the author's PC. The exe is about 37 MB.
 
 ## 4. Domain knowledge an agent needs
 - **TDI** = the signal interface between functions. Root Inport/Outport block names in each component `.slx` equal the
@@ -111,6 +135,10 @@ SpeedPitchController.
   the font of the centre name shrinks with its length.
 - **Config written from a Git Bash heredoc** under `$APPDATA` ended up empty or wrong. Write it from Python.
 - **Locked exe:** a running instance (a onefile bootloader plus a child process) locks `dist\*.exe` and its folder.
+- **Screenshots in the smoke test** with `ImageGrab` caught whatever window was on top (the user's Teams); it now uses
+  `PrintWindow` on the window handle.
+- **DLC text split:** splitting the KB "Relevant DLCs" on `;` inside parentheses produced empty chunks; split only at
+  top level (`_split_top`).
 - **Matrix parameters** have no value in CoPaD, only a hash (`matriceValue`), which is shown as `matrix#xxxxxxxx`.
   Equal hashes mean equal tables.
 
