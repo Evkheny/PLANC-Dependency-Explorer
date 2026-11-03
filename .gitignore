@@ -15,3 +15,6 @@ legacy/
 
 # release packages (zip uploaded to the GitHub release)
 release/
+
+# tuning knowledge base (user decision 03-Nov-2026: committed)
+!tuning_kb.json

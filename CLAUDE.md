@@ -24,7 +24,7 @@ overview table, without gates) and the **load cases (DLCs)** of simulation folde
 - **Tuning overview content:** physics, not workflows; no run or seed counts; no tuning gates; no platform names in
   reasons. Dependencies are checked inside the slx (signal-use role), never assumed from names.
 - **The PLANC repo is READ ONLY.** Never write to it and never run git commands in it.
-- **Never commit company data:** no PDFs, CSV exports, model JSON, Controller Description text, screenshots, or the
+- **Never commit company data:** (exception: `tuning_kb.json`, user decision 03-Nov-2026) no PDFs, CSV exports, model JSON, Controller Description text, screenshots, or the
   `legacy/` folder. `.gitignore` covers these; check `git status` before every commit.
 - **The `.exe` is not committed.** It is attached to GitHub releases.
 - **Language:** reply to the user (Eugenio) in Spanish (castellano). The UI, code, comments and README stay in English.

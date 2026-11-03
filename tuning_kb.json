@@ -1,0 +1,2615 @@
+{
+ "version": "2026-11-03",
+ "note": "Tuning task overview knowledge base (Jira OVTASK overview rows, gates omitted). Curated by Turbine Control from the PLANC model, the Controller Description and CoPaD; text marked [P] is proposed and must be reviewed.",
+ "tasks": [
+  {
+   "key": "OVTASK-120",
+   "name": "Edgewise Synchronous Frequency Estimator (ESFE)",
+   "comp": "EdgewiseSynchronousFrequencyEstimator",
+   "cd": "3.1",
+   "subarea": "Rotor Measurement and Estimation",
+   "scope": [
+    "Estimates online the 1st, 2nd and 3rd edgewise synchronous frequencies (1ES-3ES) of the rotor with a sliding discrete Fourier transform of the rotor speed, searching around an initial frequency within a frequency range; a sensitivity threshold decides when the estimate is updated.",
+    "The estimates place the edgewise notches of the Rotor Speed Filter, so that the edgewise modes of the blades are not fed back into the pitch and torque control."
+   ],
+   "kpi": [
+    "- Estimated 1ES-3ES vs the modal frequencies of the aeroelastic model over the operating range (bias per wind bin).",
+    "- Stability of the estimate: no jumps to other spectral peaks (3P harmonics, tower or drivetrain modes), low scatter.",
+    "- Tracking when the frequencies shift (rotor speed, pitch, ice) and convergence time after start-up.",
+    "- [P] Residual edgewise content in the filtered rotor speed (DLC 1.2a)."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a normal turbulence (the edgewise frequencies move with rotor speed and pitch; the estimate must stay locked over the whole operating range); DLC 1.7 OWI (ice mass lowers the edgewise frequencies: the estimate must follow, otherwise the notches miss the modes).",
+    "**Medium:** DLC 1.3 ETM (strong excitation and large pitch variation); DLC 3.1 start-up (initialisation while the rotor runs up).",
+    "**Lower:** DLC 2.1g / 2.5a grid faults (transient content may disturb the estimate briefly).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Rotor Speed Filter:** ESFE_Freq1ES-3ES set the centre frequencies of the edgewise tracking and peak-notch filters (main use).",
+    "- **External Speed Offset Interface:** ESFE_Freq1ES sets the frequency of its torsional band-stop filter.",
+    "Through the Rotor Speed Filter, every function that uses the filtered speed (speed controllers, RSA, converter torque reference) depends on a correct estimate."
+   ],
+   "affected_by": [
+    "- **Rotor Speed Filter:** SpdFilt_nPGnrcSpd is the analysed signal: rotor speed after the nP and generic band-stops, so that 3P / 6P content does not mask the edgewise peaks.",
+    "- Blade and rotor structural properties (physical): the initial frequencies and search ranges come from the modal analysis of the rotor."
+   ],
+   "risk": [
+    "Wrong initial frequency or range: the estimator locks on another peak and the speed-filter notches sit at the wrong frequency: edgewise content reaches the speed loop, with edgewise vibrations, pitch and torque activity and, in the worst case, coupling with the torque control.",
+    "Threshold too low: noisy, jumping estimate (moving notches add disturbance). Too high: no update when the frequencies shift (ice, temperature)."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+RotorMeasurementAndEstimation/workflow_ESFE.m"
+   ]
+  },
+  {
+   "key": "OVTASK-140",
+   "name": "Pitch Trajectory Tables: Opti-Pitch Curve",
+   "comp": "PitchTrajectoryTables",
+   "cd": "6.5",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Defines the minimum pitch angle as a function of power in partial load (opti-pitch curve, maximum aerodynamic efficiency) and its variants: opti-pitch at curtailed speed, ACS and safe-mode pitch tables and air-density compensation.",
+    "Its output OptiPitchAngle is the base of the minimum pitch limit on which all load-handle offsets are added; it sets the aerodynamic operating point, and therefore thrust and power, below and around rated."
+   ],
+   "kpi": [
+    "- Power curve / AEP and aerodynamic efficiency in partial load (DLC 1.2a, power-curve runs).",
+    "- Thrust and blade / tower loads in the transition to rated (thrust peak).",
+    "- [P] Margin to stall (angle of attack) and pitch activity around rated."
+   ],
+   "dlcs": [
+    "**High:** power-curve runs and DLC 1.2a (efficiency in partial load and the thrust peak around rated, which drives tower and blade fatigue).",
+    "**Medium:** DLC 1.2c steep shear and DLC 1.3 ETM (operation near rated with high flap loads: the minimum pitch sets the thrust); DLC 2.4a/b extreme yaw error.",
+    "**Lower:** DLC 1.7 OWI (iced operation uses its own offsets).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Trajectory Offsets:** OptiPitchAngle is the base of the minimum pitch; the source flags (OptPitch__Source, OPCS_IsLimiting, SafeMode_PitLimiting) report what limits it (main use).",
+    "- **Power Boost:** the opti-pitch table at rated power is used in the boost criteria.",
+    "- **Power Estimator:** the active opti-pitch curve feeds the running power-curve calculation.",
+    "- **Inertial Response:** the opti-pitch and curtailed-speed tables estimate the available power.",
+    "- **ACS:** OptPitch_NoCmp enters its decision making."
+   ],
+   "affected_by": [
+    "- **ACS** and **Controller Safe Mode:** their pitch tables are blended into the curve.",
+    "- **Air Density:** AirDensi__RatioPit scales the curve (density compensation).",
+    "- **Reduction Interface**, **Resonance Speed Avoider** and **Power Trajectory:** active speed / power references, RSA state and the speed-power curve decide when opti-pitch at curtailed speed is active and where it is read.",
+    "- Blade aerodynamics (physical): the curve comes from the power-coefficient tables of the blade."
+   ],
+   "risk": [
+    "Sub-optimal curve: AEP loss. Too low pitch near rated: thrust peak, higher flap and tower loads, stall risk in turbulence. Wrong curtailed-speed curve: loads or AEP loss in curtailed operation."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-292",
+   "name": "Active Drive Train Damper 2 (ADTD2)",
+   "comp": "ActiveDriveTrainDamper2",
+   "cd": "9.2",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "Damps drivetrain torsional oscillations: the measured generator speed on the low-speed side (GenSdSpd_ValueLSS) is high-pass filtered, phase-adjusted and notch-filtered at 3P, and fed back as an additional generator power / torque with the right phase to stabilise the torsional mode.",
+    "Purpose: reduce the fatigue of gearbox and shafts and avoid unstable drivetrain modes."
+   ],
+   "kpi": [
+    "- Damping of the drivetrain torsional mode (logarithmic decrement / decay after a torque step).",
+    "- Gearbox and main-shaft torque fatigue (DEL) in DLC 1.2a.",
+    "- Power / torque ripple added by the damper and the share of converter margin it uses.",
+    "- No 3P torque injected; correct behaviour during and after grid faults."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a normal turbulence (torsional fatigue of the gearbox); DLC 2.1g grid drop and DLC 2.5a LVRT (the torque step excites the drivetrain mode; the damper must keep working, scaled, during and after the dip).",
+    "**Medium:** DLC 1.3 ETM; DLC 3.x / 4.x start-up and shut-down (torque transients).",
+    "**Lower:** DLC 1.4 ECD.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Converter Interface:** ADTD2__Power is added to the power / torque reference (after its own limitation): the damping action itself.",
+    "- **Dynamic Power Envelope:** ADTD2_PwrMax reserves power margin for the damper.",
+    "- **Grid Fault Ride Through:** ADTD2__Speed (filtered) is used during grid faults."
+   ],
+   "affected_by": [
+    "- **Speed Source Interface:** GenSdSpd_ValueLSS is the measured speed the damping is computed from (main input); GenSdSpd__Quality enables it.",
+    "- **Grid Fault Ride Through:** gain and saturation scaling, post-fault switching and the FRT speed.",
+    "- **Rotor Speed Filter:** only for the 3P notch frequency and the lead-factor scheduling.",
+    "- Drivetrain stiffness and inertia (physical): they set the torsional frequency the damper must act on."
+   ],
+   "risk": [
+    "Too little gain or wrong phase: poorly damped torsional mode, gearbox and shaft fatigue, possible instability. Too much gain: power ripple, grid flicker, interaction with the speed-power control. Wrong 3P notch: 3P torque injected."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-155",
+   "name": "Wind Speed Estimator",
+   "comp": "WindSpeedEstimator",
+   "cd": "5.19",
+   "subarea": "Weather Measurement and Estimation",
+   "scope": [
+    "Estimates the rotor-effective wind speed at standard air density, using the turbine as a sensor: collective pitch, rotor speed and power are inverted through the rotor performance (power-coefficient) tables.",
+    "Outputs (WinAvail__SpdRotEq, SpdEquiv, SpdFree, status) are used for gain scheduling, derating, available power and load estimation."
+   ],
+   "kpi": [
+    "- Bias and scatter of the estimate vs the rotor-effective wind of the simulation per wind bin (DLC 1.2a).",
+    "- Dynamic tracking in gusts (DLC 1.4) and consistency with air-density and yaw-misalignment compensation.",
+    "- [P] Effect on the consumers: speed-pitch gain scheduling and high-wind derating thresholds."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a and power-curve runs (bias over the wind-speed range); DLC 1.4 ECD and 9.4 gusts (the estimate schedules the speed-pitch gains during the gust).",
+    "**Medium:** DLC 1.5 EWS and DLC 2.4a/b yaw error (inflow not seen by the tables); DLC 1.7 OWI (ice degrades the rotor performance, biasing the estimate).",
+    "**Lower:** DLC 1.3 ETM.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Pitch Controller:** WinAvail__SpdRotEq schedules the PI gains (loop gain over the operating range).",
+    "- **Power Estimator:** static / running power-curve lookup of the available power.",
+    "- **Thrust Estimator:** thrust lookup (used by GILL and other load functions).",
+    "- **High Wind Operator**, **Speed Limit by Power**, **Speed Limit by Wind:** derating decisions on the estimated wind.",
+    "- Power Boost (boost availability), ACS (wind inputs), Inertial Response (pitch compensation), Yaw Misalignment, Turbulence Estimator and Rotor Performance Monitor (filtered estimate and status)."
+   ],
+   "affected_by": [
+    "- **Speed-Pitch Controller:** PitchRefCollective is one of the three inputs.",
+    "- **Speed Source Interface:** RotSpd_Value and its quality.",
+    "- **Power input:** available net power (grid) or the Power Inflow Estimator; Efficiency Compensator and the tower-damper power are subtracted.",
+    "- **Air Density** (ratio) and yaw-misalignment value.",
+    "- Rotor performance tables (physical): the only WTGType parameters of the function."
+   ],
+   "risk": [
+    "Biased estimate: wrong speed-pitch gain scheduling (sluggish or unstable loop), wrong high-wind derating (AEP loss or high-wind loads), wrong available-power and thrust estimates for grid services and load functions."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-138",
+   "name": "Pitch Trajectory Offsets: Pitch Limit by Wind (PLBW)",
+   "comp": "PitchTrajectoryOffsets",
+   "cd": "6.4",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Builds the minimum pitch angle from the opti-pitch angle plus a set of offsets (load handles BLL / GILL, monitors, ice, yaw misalignment, inertial response, air-density compensation) and the Pitch Limit by Wind: a minimum pitch as a function of the highest measured wind speed.",
+    "PLBW protects against extreme blade loads with large yaw errors at high wind, when the measured wind is high but the opti-pitch would still allow a low pitch. The load offsets can also shift the collective pitch reference directly."
+   ],
+   "kpi": [
+    "- Blade flap and tower extremes with large yaw error at high wind (DLC 2.4a/b) and in gusts.",
+    "- AEP / power-curve loss from PLBW activation in normal operation (DLC 1.2a).",
+    "- [P] Correct release of the limit after the wind drops (no lingering derating) and smooth combination of offsets."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.4a/b extreme yaw error (large yaw error at high wind: the case PLBW exists for); DLC 1.2a (activation in normal operation costs AEP).",
+    "**Medium:** DLC 1.3 ETM, DLC 1.4 ECD and DLC 9.4 (direction change with high wind); DLC 1.5 EWS.",
+    "**Lower:** DLC 1.7 OWI (ice offsets added here).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Control States**, **Speed Control Scheduler**, **Power Trajectory**, **RSA:** MinPitch and LoadRedActive are the pitch floor and the load-reduction flag the operating states, speed-controller switching, speed-power scaling and pitch gap use.",
+    "- **Tower Acceleration Limiter** and **Controller Functionality Scheduler:** LoadLimPitch_Source / LoadRedActive select gains and priorities between load handles.",
+    "- ACS, Inertial Response, External Speed Offset, Coupling Conditions, Operation (idling) and LIDAR feed-forward use MinPitch as operating-point information."
+   ],
+   "affected_by": [
+    "- **Pitch Trajectory Tables:** OptiPitchAngle is the base (main input) and the source flags.",
+    "- **BLL**, **GILL** and **Pitch Tracking Monitor:** load pitch offsets combined (maximum) and shifted into the collective pitch.",
+    "- Blade edgewise / flapwise vibration monitors, Yaw Misalignment Monitor, Operation with Ice, Inertial Response: pitch offsets added to the opti-pitch.",
+    "- **Wind Speed Filter** (MaxWindSpeed) and **Air Density:** inputs of PLBW and density compensation.",
+    "- Speed-Pitch Controller (PitchRefCollective, MinPitchLimitActive) for the shift and the PLBW monitor."
+   ],
+   "risk": [
+    "PLBW too low or too late: high flap and tower extremes with yaw error at high wind. Too high or too slow to release: unnecessary derating and AEP loss. Wrong combination of offsets: pitch steps, double counting of load offsets."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+OperationalTrajectories/workflow_autoTune_PLBW.m"
+   ]
+  },
+  {
+   "key": "OVTASK-133",
+   "name": "Individual Pitch Control (IPC)",
+   "comp": "IndividualPitchControl",
+   "cd": "9.10",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "Reduces blade flap fatigue and the rotor tilt and yaw moments: the measured tilt and yaw moments are transformed into a cyclic (1P) pitch offset per blade (inverse Coleman transform with the rotor azimuth), with 3P mixing, amplitude limits and activation logic.",
+    "Trade-off: more pitch travel, hence more pitch bearing damage and actuator wear (tuned together with PDA)."
+   ],
+   "kpi": [
+    "- Blade flap and hub / yaw-bearing fatigue (DEL) and mean tilt / yaw moments (DLC 1.2a).",
+    "- Pitch bearing damage and pitch travel / rate (cost of IPC).",
+    "- Extreme tilt / yaw moments and blade loads in DLC 1.3, 1.4 and yaw error (DLC 2.4b).",
+    "- Amplitude saturation occupancy and activation / deactivation behaviour."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a normal turbulence (shear, tilt and turbulence create 1P blade load variations: the fatigue IPC removes, and the pitch bearing damage it costs); DLC 2.4b extreme yaw error at high wind (large yaw / tilt moments).",
+    "**Medium:** DLC 1.3 ETM and DLC 1.4 ECD (extreme rotor moments); DLC 1.2c steep shear (large 1P loading).",
+    "**Lower:** DLC 1.5 EWS.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Controller Functionality Scheduler:** IPC_PitcOffA/B/C are summed into the individual pitch commands (main actuation); IPC_ResMomActLevel sets the IPC / PDA activation.",
+    "- **Controller Safe Mode:** IPC_Status triggers the safe-mode derating.",
+    "- Pitch Service Mode (offsets in service operation).",
+    "Physically: pitch bearings and pitch actuators (more pitch travel) and PDA, which limits the pitch movement IPC adds."
+   ],
+   "affected_by": [
+    "- **Moment Transformations:** tilt and yaw moments and their status (main inputs).",
+    "- **Rotor Azimuth Estimator:** azimuth for the inverse Coleman transform (phase of the cyclic pitch).",
+    "- **Controller Functionality Scheduler**, **Pitch System Amplitude Limit Estimator**, IPC-assisted yawing: allowed amplitudes and residual limits.",
+    "- Speed-Pitch Controller (collective pitch for the amplitude limits), Pitch Control States (activation ramp), Rotor Speed Filter (3P frequency only)."
+   ],
+   "risk": [
+    "Too little IPC: higher blade flap and yaw / tilt fatigue. Too much: pitch bearing damage and actuator wear above design, interaction with PDA and TTCC. Wrong azimuth phase: IPC adds load instead of removing it."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+LoadReductionHandles/workflow_IPC.m"
+   ]
+  },
+  {
+   "key": "OVTASK-128",
+   "name": "Tip to Tower Clearance Controller (TTCC)",
+   "comp": "TipTowerClearanceController",
+   "cd": "9.12",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "Prevents blade-tower strikes: when the load level indicates a risk, it pitches out the blade that is about to pass in front of the tower, unloading it and increasing the tip-to-tower clearance.",
+    "Activation from the filtered average out-of-plane and tilt moments (load level) and from the blade azimuth (window in front of the tower)."
+   ],
+   "kpi": [
+    "- Minimum tip-to-tower clearance (ULS) in DLC 1.2c steep shear, DLC 1.5 EWS and the turbulent load cases, with and without TTCC.",
+    "- AEP loss and pitch activity / pitch bearing damage caused by TTCC.",
+    "- Activation statistics vs wind speed (only where clearance is at risk)."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2c steep shear and DLC 1.5 EWS (positive shear bends the top blade towards the tower: minimum clearance); DLC 1.2a and its DLC 1.1 extrapolation (extreme deflection in normal turbulence).",
+    "**Medium:** DLC 1.3 ETM, DLC 1.4 ECD.",
+    "**Lower:** DLC 2.4 yaw error.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Controller Functionality Scheduler:** TTCC__PitcOffA/B/C are summed into the individual pitch commands (main actuation); azimuth activation flags drive the TTCC / PDA priority.",
+    "- **Controller Safe Mode:** TTCC__Status triggers the safe-mode derating.",
+    "- Pitch Service Mode.",
+    "Physically: pitch bearing damage and AEP."
+   ],
+   "affected_by": [
+    "- **Moment Transformations:** out-of-plane and tilt moments (load level, main input) and their status.",
+    "- **Rotor Azimuth Estimator:** azimuth window in front of the tower (timing of the pitch-out).",
+    "- **Rotor Speed Filter:** only for the azimuth-shift estimate and the 3P / 9P filter frequencies.",
+    "- Controller Functionality Scheduler (allowed amplitude); BLL and IPC (shared pitch action)."
+   ],
+   "risk": [
+    "Too late or too weak: blade-tower strike risk, clearance below the design limit (already flagged as critical by Loads). Too early or too strong: AEP loss, pitch activity and bearing damage. Wrong azimuth timing: pitch-out on the wrong blade."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+LoadReductionHandles/workflow_autoTune_TTCC.m"
+   ]
+  },
+  {
+   "key": "OVTASK-136",
+   "name": "Pitch Damage Attenuator (PDA)",
+   "comp": "PitchDamageAttenuator",
+   "cd": "9.11",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "Reduces pitch bearing damage, which grows with the cube of the bearing moment times the pitch travel: PDA limits the pitch movement of the blade(s) more heavily loaded than the others, from the mean and fluctuating pitch bearing moments.",
+    "Activation depends on bearing moment level, rotor speed, pitch rate and pitch imbalance."
+   ],
+   "kpi": [
+    "- Pitch bearing damage (moment^3 x travel) per blade in DLC 1.2a vs no PDA.",
+    "- Side effects on blade and hub loads and on speed control (pitch travel limited).",
+    "- Activation level statistics and interaction with IPC / TTCC."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a normal turbulence (pitch bearing fatigue accumulates in normal operation, especially with IPC active).",
+    "**Medium:** DLC 1.2c steep shear (large and unequal blade moments); DLC 1.3 ETM (high pitch activity).",
+    "**Lower:** DLC 1.4 ECD (extremes: PDA must not reduce protection).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Controller Functionality Scheduler:** PDA_ActLevel coordinates IPC / PDA activation; the PDA offsets reach the individual pitch commands through it.",
+    "- **Controller Safe Mode:** PDA_Status triggers the safe-mode derating.",
+    "Physically: IPC and TTCC effectiveness (their pitch movement is limited) and the speed loop (collective pitch rate)."
+   ],
+   "affected_by": [
+    "- **Moment Transformations:** pitch bearing moments of each blade and their status (main input).",
+    "- **Speed-Pitch Controller:** PitchRefCollective sets the pitch-rate activation and the offset calculation.",
+    "- **Overspeed Monitor:** OvSpdMon__Lim1 sets the rotor-speed activation level.",
+    "- Controller Functionality Scheduler (activation and pitch commands), Pitch Control States (activation ramp, maximum pitch ramp), Rotor Speed Filter (activation level only)."
+   ],
+   "risk": [
+    "Too little action: pitch bearing damage above design (raised by IPC). Too much: blade and hub loads increase and the speed control loses pitch authority (overspeed risk)."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+LoadReductionHandles/workflow_PDA.m"
+   ]
+  },
+  {
+   "key": "OVTASK-154",
+   "name": "High Wind Operator (HWO)",
+   "comp": "HighWindOperator",
+   "cd": "8.4",
+   "subarea": "Grid Support",
+   "scope": [
+    "Curtails power and rotor speed as a function of the estimated wind speed before the high-wind cut-out, so that the turbine keeps producing (grid compliance, no abrupt cut-out) while the loads at very high wind stay within the design.",
+    "Outputs the power and speed reductions (HWO_PwrRed, HWO_SpdRed) to the Reduction Interface and ACS."
+   ],
+   "kpi": [
+    "- Power and speed vs wind speed above the start of curtailment and at cut-out (production kept, no abrupt stops).",
+    "- Extreme and fatigue loads at high wind (DLC 1.2a / 1.3 at 20-25+ m/s) with the curtailment trajectory.",
+    "- [P] Number of cut-outs / restarts in high-wind time series and hysteresis behaviour."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a and DLC 1.3 ETM at high wind speeds (loads and production along the curtailment trajectory); DLC 2.4b extreme yaw error at 21-25 m/s (high-wind operation with large yaw error).",
+    "**Medium:** DLC 1.4 / 9.4 gusts at high wind (curtailed speed reference during the gust).",
+    "**Lower:** DLC 6.x idling (behaviour after cut-out).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Reduction Interface:** HWO_PwrRed / HWO_SpdRed enter the minimum selection of the active power and speed references (main use).",
+    "- **ACS:** the HWO reductions are combined with the other reduction sources.",
+    "Through the active references: Speed-Pitch and Speed-Power controllers, Power Trajectory and all functions working on ActRef.Speed / ActRef.Power."
+   ],
+   "affected_by": [
+    "- **Wind Speed Estimator:** WinAvail__SpdFree (filtered) is the wind speed the curtailment is scheduled on (main input).",
+    "- **Wind Speed Monitor:** the active wind limit (WindLim__ActWL6) shifts the trajectories.",
+    "- **Power Boost** and **Flex Configuration:** rated power (with boost) the reduction is computed from.",
+    "- HWO / HWRT type selection and enable flags (HWOType selects the trajectory)."
+   ],
+   "risk": [
+    "Curtailment too late or too weak: high loads at very high wind or more cut-outs. Too early or too strong: AEP loss. Wrong wind-speed filtering: oscillating references (pitch and power activity) near the thresholds."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-142",
+   "name": "Power Estimator",
+   "comp": "PowerEstimator",
+   "cd": "5.6",
+   "subarea": "Weather Measurement and Estimation",
+   "scope": [
+    "Calculates the running power curve from the current operational settings (speed-power curve, opti-pitch curve, design power and speed) and estimates the possible (available) power from the estimated wind speed.",
+    "The available power is used by grid functions and park control (possible power, curtailment, grid faults)."
+   ],
+   "kpi": [
+    "- Available power vs the power the turbine actually produces in unconstrained operation (bias / scatter per wind bin, DLC 1.2a and power-curve runs).",
+    "- Correct update of the running power curve when settings change (opti-pitch, speed-power curve, rating).",
+    "- [P] Accuracy in curtailed operation (where possible power cannot be measured)."
+   ],
+   "dlcs": [
+    "**High:** power-curve runs and DLC 1.2a (accuracy of the possible power over the wind range).",
+    "**Medium:** curtailed operation (DLC 9.7 curtailed operation; derated cases), DLC 2.1g / 2.5a grid faults (available power used by GFRT).",
+    "**Lower:** DLC 1.3 ETM.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Grid Fault Ride Through** and **Power Limit by Power Available:** PwrAvail__PwrRotAR (filtered) is their available power.",
+    "- **Low Power Detector:** power-curve points (PwrCrv_*) are the reference for detecting under-performance and ice.",
+    "- High Performance Park Pilot (available power to the park controller)."
+   ],
+   "affected_by": [
+    "- **Wind Speed Estimator:** estimated wind speeds (rotor-equivalent and equivalent) index the power curves (main input).",
+    "- **Pitch Trajectory Tables** and **Power Trajectory:** opti-pitch and speed-power curves define the running power curve.",
+    "- **Flex Configuration** (rated power) and Reduction Interface (non-park power limit).",
+    "- Rotor performance tables (physical): the only WTGType parameters of the function."
+   ],
+   "risk": [
+    "Biased available power: wrong possible-power reporting to the park / grid operator, wrong power reserve in grid functions, false low-power or ice detections."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-141",
+   "name": "Power Boost",
+   "comp": "PowerBoost",
+   "cd": "6.6",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Increases power and rotor speed above their rated / design values above rated wind speed when the operating conditions allow it (ambient temperature, turbulence, pitch reference, grid power factor, no safe mode, ACS and curtailment conditions), to gain energy.",
+    "Outputs the active boosted rated power and speed (ActBoost_PwRated / SpdRated) used by the reduction interface and the speed-power control."
+   ],
+   "kpi": [
+    "- AEP gain vs no boost and the loads increase it causes (fatigue and extremes above rated, DLC 1.2a / 1.3).",
+    "- Correct enabling / disabling with the criteria (temperature, turbulence, pitch) and smooth ramps.",
+    "- [P] Margin to the electrical limits of generator and converter while boosting."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a above rated (where boost runs: AEP gain and fatigue increase); DLC 1.3 ETM (turbulence criterion must disable boost).",
+    "**Medium:** DLC 2.3 and 4.2 with EOG (boost is disabled in these cases: transition behaviour); DLC 1.4 ECD.",
+    "**Lower:** DLC 1.2 NTM.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Reduction Interface:** boosted rated power / speed and boost limits enter the active references (main use).",
+    "- **Speed-Power Controller:** ActBoost_PwRated sets its power limits.",
+    "- **High Wind Operator**, Frequency Controller, HTRT, Power Limit by Grid Voltage, Thermal Mode Enforcer, park pilot: their reductions are computed relative to the boosted rated power.",
+    "- ACS (BoostAllowed) and Yaw Offset Interface (IsPowerBoosting)."
+   ],
+   "affected_by": [
+    "- **Dynamic Power Envelope** and converter power limit: available boost (main limit).",
+    "- **Speed-Pitch Controller** (PitchRefCollective) and **Pitch Trajectory Tables** (opti-pitch at rated power): pitch criterion for speed boost.",
+    "- **Wind Speed Estimator** and **Turbulence Estimator:** turbulence criterion and available boost.",
+    "- ACS, Controller Safe Mode, HTRT, Reduction Interface, RSA window configuration, ambient temperature, power factor: enabling criteria."
+   ],
+   "risk": [
+    "Boost too aggressive or criteria too loose: loads and component temperatures above design. Too conservative: AEP loss. Wrong ramps: power / speed steps."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-153",
+   "name": "Thrust Estimator",
+   "comp": "ThrustEstimator",
+   "cd": "5.9",
+   "subarea": "Weather Measurement and Estimation",
+   "scope": [
+    "Estimates the rotor thrust from collective pitch, rotor speed and estimated wind speed through the rotor thrust tables (with air-density correction), normalised by the nominal thrust.",
+    "Used by load-estimating and load-limiting functions."
+   ],
+   "kpi": [
+    "- Estimated vs simulated rotor thrust (bias / scatter per wind bin, DLC 1.2a) and in gusts (DLC 1.4).",
+    "- Correct normalisation (nominal thrust) for the consumers."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a (static accuracy over the wind range, including the thrust peak near rated).",
+    "**Medium:** DLC 1.4 ECD and DLC 1.3 ETM (dynamic accuracy in gusts and turbulence).",
+    "**Lower:** DLC 1.7 OWI (iced rotor changes the thrust tables).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **ACS:** normalised thrust, its statistics and status feed the load estimators (main use).",
+    "- **GILL:** ThrustEs__ThrustNo schedules the gains of the rotor-acceleration type (disabled in the current configuration).",
+    "- LIDAR processing (induction factor)."
+   ],
+   "affected_by": [
+    "- **Wind Speed Estimator:** WinAvail__SpdRot indexes the thrust table (main input).",
+    "- **Speed-Pitch Controller** (PitchRefCollective) and **Speed Source Interface** (rotor speed).",
+    "- **Air Density:** density correction.",
+    "- Rotor thrust tables and nominal thrust (physical): the WTGType parameters."
+   ],
+   "risk": [
+    "Biased thrust: ACS load estimates wrong (unneeded curtailment or loads above design in curtailed operation)."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-139",
+   "name": "Tower Acceleration Limiter (TAL)",
+   "comp": "TowerAccelerationLimiter",
+   "cd": "9.13",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "Attenuates tower fore-aft oscillations by limiting the pitch rate: from the fore-aft nacelle acceleration (band-limited around the tower frequency), the operating state and the collective pitch it computes a pitch-rate gain for the pitch control states.",
+    "It targets mainly stops, where a fast pitch-out after a thrust peak drives the tower bottom fore-aft extreme."
+   ],
+   "kpi": [
+    "- Tower-base fore-aft extremes in stops and shut-downs (DLC 4.x, 5.1, 2.x with stop) and in gusts with stop (DLC 2.3).",
+    "- Stopping time and rotor overspeed during the stop (a slower pitch-out must not cause overspeed).",
+    "- Activation statistics in normal operation (DLC 1.2a: minimal)."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.3 EOG with grid drop and DLC 4.2 EOG shut-down (thrust drops while the tower is moving: the tower swings back and the fore-aft extreme is set); DLC 5.1 emergency shut-down; DLC 2.1 faults with stop.",
+    "**Medium:** DLC 4.1 normal shut-down; DLC 1.3 ETM (tower oscillation in operation).",
+    "**Lower:** DLC 1.2a (must not act in normal operation).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Control States:** TwrAccLi__PitRtGn scales the maximum pitch ramp in the operating states (main actuation).",
+    "Physically: the stop dynamics (pitch rate, stopping time, overspeed margin) and the tower fore-aft loads; it shares the tower response with GILL."
+   ],
+   "affected_by": [
+    "- **Nacelle Acceleration Filter:** fore-aft acceleration (main input) and the Nacelle Acceleration Sensor Validation status.",
+    "- **Tower Frequency Estimator:** tower frequency for the band-pass filter parameters.",
+    "- **Speed-Pitch Controller** (PitchRefCollective activation level), Operation / pitch states (operating-state activation), Pitch Trajectory Offsets (load-reduction source selects the gain)."
+   ],
+   "risk": [
+    "Too little action: high tower fore-aft extremes in stops. Too much: pitch-out too slow in stops, overspeed and longer stopping, higher blade loads during the stop."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+LoadReductionHandles/workflow_TAL.m"
+   ]
+  },
+  {
+   "key": "OVTASK-107",
+   "name": "Safety System Overspeed (SRSG)",
+   "comp": null,
+   "cd": "-",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Secondary protection layer against overspeed: the safety system (SRSG and LMU) stops the turbine independently of the controller when the rotor speed exceeds its limits. Turbine Control owns the speed thresholds of the safety system together with the Safety team.",
+    "The thresholds must sit above the controller overspeed monitor (primary layer) and below the design overspeed of the structure."
+   ],
+   "kpi": [
+    "- Maximum rotor speed in all load cases vs the SRSG / LMU thresholds (no safety trip in normal or extreme operation; trip in the overspeed fault cases).",
+    "- Order of the layers: controller overspeed monitor < SRSG < design overspeed.",
+    "- Extremes in the safety-system stop cases (DLC 2.2)."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.1c controller overspeed and DLC 2.2 safety-system overspeed (the safety layer must stop the turbine when the controller fails); DLC 2.1g grid drop and DLC 2.3 EOG with grid drop (highest speed peaks without torque).",
+    "**Medium:** DLC 1.4 ECD, DLC 1.5 EWS, DLC 9.4 extreme gusts (must not trip the safety system).",
+    "**Lower:** DLC 1.2 normal turbulence (margin).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Safety-system stops (no controller signal link): availability, the loads of the safety stop and the overspeed design envelope."
+   ],
+   "affected_by": [
+    "- **Controller Overspeed Monitor** and **Speed-Pitch Controller** (physical): they set the speed the safety thresholds must stay above.",
+    "- Speed measurements of the safety system and the design overspeed of the turbine."
+   ],
+   "risk": [
+    "Too low: safety trips in normal or extreme operation (hard stops, high loads, availability loss). Too high: no independent protection before the design overspeed; certification non-compliance."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+SafetySystem/workflow_SRSG.m"
+   ]
+  },
+  {
+   "key": "OVTASK-143",
+   "name": "Dynamic Power Envelope",
+   "comp": "DynamicPowerEnvelope",
+   "cd": "12.3",
+   "subarea": "Power System Actuation",
+   "scope": [
+    "Limits the power reference to what converter, generator and electrical hardware can deliver at the instantaneous rotor speed (power envelope vs speed, short-term peak envelope), and reserves power margin for the active dampers (ADTD2, side-side tower damper).",
+    "The active envelope (ActPwrEnv_Power / Speed) is the power-speed boundary used by the speed-power control and many operational functions."
+   ],
+   "kpi": [
+    "- Envelope consistent with the electrical capability statement of generator and converter (no limit exceeded, no unnecessary margin).",
+    "- AEP / power curve with the envelope active; behaviour in grid faults and reduced-converter operation.",
+    "- Power margin left for ADTD2 and the tower damper."
+   ],
+   "dlcs": [
+    "**High:** power-curve runs and DLC 1.2a (operation along the envelope in partial and full load); DLC 2.5a LVRT / grid faults (peak envelope and damper margins during the dip).",
+    "**Medium:** DLC 1.3 ETM (speed excursions along the envelope); start-up / shut-down (low-speed part of the envelope).",
+    "**Lower:** DLC 1.4 ECD.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Power Controller:** active envelope and reduced-converter mode set its power limits (main use).",
+    "- **Converter Interface:** electrical limits, peak envelope and damper power limits saturate the power / torque reference.",
+    "- **Active Tower Damper Side-Side:** DynPwrEnv_ATDPwrLim limits its power.",
+    "- Reduction Interface, Power Boost (available boost), Speed Limit by Power, RSA and RSA window configuration, ACS, Grid Forming Operator, self-sustained turbine: they read the envelope as the power-speed boundary."
+   ],
+   "affected_by": [
+    "- Electrical capability of generator and converter (physical): the envelope tables are the WTGType / GenType parameters.",
+    "- **ADTD2** (ADTD2_PwrMax) and **Active Tower Damper** (PwTwrDamp) margins; **GFRT** scaling.",
+    "- **Rotor Speed Filter:** speed for the envelope interpolation."
+   ],
+   "risk": [
+    "Envelope above the hardware capability: converter / generator overload and trips. Too conservative: AEP loss and less margin for the speed control (overspeed risk) and dampers."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+PowerSystemActuation/workflow_DynPwEnv.m"
+   ]
+  },
+  {
+   "key": "OVTASK-152",
+   "name": "Adaptive Control Strategy (ACS)",
+   "comp": "AdaptiveControlStrategy",
+   "cd": "13.1",
+   "subarea": "Operational Scheduling",
+   "scope": [
+    "Tailors the turbine operation to the site loads: representative load estimators built from measured signals (thrust, tilt / yaw moments, nacelle accelerations, wind, turbulence, tower frequency) decide when to curtail power / speed or offset the pitch, so that the loads stay within the design while energy is maximised.",
+    "Outputs power and speed reductions to the Reduction Interface, pitch-table offsets and a boost disable."
+   ],
+   "kpi": [
+    "- Load-estimator accuracy vs simulated loads (tower, blade, hub) in DLC 1.2 / 1.3.",
+    "- Load reduction achieved vs AEP lost when ACS acts (DLC 1.3 ETM with ACS active).",
+    "- No unnecessary activation in normal turbulence (DLC 1.2a)."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.3 ETM (the only extreme case where ACS acts, with thresholds x1.22 for estimator uncertainty: the loads ACS must reduce); DLC 1.2a (activation and AEP cost in normal turbulence).",
+    "**Medium:** DLC 2.2x ETM with ACS failure (loads if ACS does not act); site-specific turbulence / wake cases.",
+    "**Lower:** all other DLCs (ACS disabled).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Reduction Interface:** ACS__Power / ACS__Speed reduce the active references (main actuation).",
+    "- **Pitch Trajectory Tables / Offsets:** ACS__PitchTbl offsets the minimum pitch.",
+    "- **Power Boost:** ACS__BoostDis disables boost.",
+    "- Inertial Response (pitch table for the available-power estimate)."
+   ],
+   "affected_by": [
+    "- **Thrust Estimator**, **Moment Transformations** (tilt / yaw moments), **Nacelle Acceleration Filter** and validation, **Wind Speed / Turbulence Estimators**, **Tower Frequency Estimator** (frequency compensation): inputs of the load estimators (main inputs).",
+    "- Speed-Pitch Controller (PitchRefCollective) and Speed Source Interface (rotor speed) statistics.",
+    "- Dynamic Power Envelope, Flex Configuration, HWO, Safe Mode, Power Boost, RSA windows: limits and other reduction sources it is combined with."
+   ],
+   "risk": [
+    "Estimators not matched to the rotor: ACS curtails when not needed (AEP loss) or does not act when loads exceed the design (site suitability not ensured). Thresholds wrong: frequent activation, oscillating references."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+OperationalScheduling/workflow_ACSDesign.m, workflow_ACS.m, workflow_ACS_step1.m"
+   ]
+  },
+  {
+   "key": "OVTASK-132",
+   "name": "Pitch Servo Controller (PSC)",
+   "comp": "PitchServoController",
+   "cd": "10.5",
+   "subarea": "Blade Actuation",
+   "scope": [
+    "Controls the pitch position of each blade so that it tracks its pitch reference: a position loop on the hydraulic cylinder (piston length to pitch angle), with gain scheduling on pitch position and direction and band-stop / low-pass filters on the feedback.",
+    "Its bandwidth and phase are part of every pitch-based loop (speed-pitch, IPC, load handles)."
+   ],
+   "kpi": [
+    "- Tracking error and bandwidth / phase lag of pitch angle vs reference (step and chirp responses, DLC 1.2a time series).",
+    "- Pitch-rate and valve saturation occupancy; no oscillation at structural frequencies (blade edgewise, rotor modes).",
+    "- [P] Effect on the speed-loop margin and on IPC / PDA effectiveness."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a (continuous pitch activity: tracking, valve wear, interaction with the blade modes); DLC 1.4 ECD and DLC 2.1g / 2.5a (fast large pitch steps when the speed loop reacts to a gust or a torque loss).",
+    "**Medium:** DLC 4.x / 5.1 shut-downs (maximum pitch rate towards feather).",
+    "**Lower:** DLC 2.2 pitch runaway cases (fault handling is in the safety chain).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "The pitch hardware (cylinder, valves) and, through the actual pitch angle, every pitch-based control loop: Speed-Pitch Controller, IPC, PDA, TTCC, BLL, GILL, TAL (physical coupling inside their loops, no signal link to them)."
+   ],
+   "affected_by": [
+    "- Pitch references after the Pitch Reference Limiter (collective + individual offsets).",
+    "- Hydraulic pitch system and blade inertia / pitch bearing friction (physical): plant of the position loop."
+   ],
+   "risk": [
+    "Too slow or too much phase lag: reduced stability margin of the speed loop, less effective load handles, overspeed peaks. Too aggressive: valve and actuator wear, oscillations, excitation of blade modes."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+BladeActuation/workflow_PSC.m"
+   ]
+  },
+  {
+   "key": "OVTASK-159",
+   "name": "Speed-Power Controller (PI)",
+   "comp": "SpeedPowerController",
+   "cd": "7.8",
+   "subarea": "Speed Control",
+   "scope": [
+    "Controls the rotor speed with the generator power (torque) in partial load (regions 1-2) up to design speed and rated power: a PI on the filtered rotor speed tracking the speed reference of the speed-power curve, with power limits from the active power envelope, ramp limits and grid-fault / inertial-response overrides.",
+    "Its power reference sets the partial-load operating point and the drivetrain torque dynamics."
+   ],
+   "kpi": [
+    "- Speed tracking (mean / std per wind bin) and power curve / AEP in partial load (DLC 1.2a, power-curve runs).",
+    "- Drivetrain torque fluctuations and fatigue; power ramp rates within grid requirements.",
+    "- Smooth transition to the speed-pitch controller at rated and behaviour after grid faults."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a and power-curve runs (partial-load speed regulation, AEP and drivetrain fatigue).",
+    "**Medium:** DLC 2.1g / 2.5a grid faults (power reference recovery after the dip); DLC 3.x start-up (ramp to the speed-power curve).",
+    "**Lower:** DLC 1.3 ETM (transition to full load).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Converter Interface:** power reference and ramp limits (main actuation: generator torque).",
+    "- **Power Control States** and **Speed Control Scheduler:** regulated power, envelope maximum and speed error drive the power states and the speed-controller switching.",
+    "- **Grid Fault Ride Through** and **Inertial Response:** pre-fault power limits and local power reference.",
+    "- Efficiency Compensator, Power Limit by Power Available, LIDAR feed-forward."
+   ],
+   "affected_by": [
+    "- **Rotor Speed Filter:** RotSpdFi_Spd is the PI feedback and scheduling input; RotSpdFi_SpdLead selects the envelope point.",
+    "- **Dynamic Power Envelope**, **Reduction Interface**, **Power Boost**, Flex Configuration, Power Limit by Grid Voltage: power limits and active references.",
+    "- **Resonance Speed Avoider:** speed reference and power limits around the resonance windows.",
+    "- **Grid Fault Ride Through** / **Inertial Response:** override of the power reference during grid events; Speed Control Scheduler (operation mode, reset)."
+   ],
+   "risk": [
+    "Too soft: speed deviations from the optimal tip-speed ratio (AEP loss), slow RSA window crossing. Too aggressive: torque fluctuations, drivetrain fatigue, grid flicker, interaction with ADTD2."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-161",
+   "name": "Speed-Power Controller: Gain Scheduling",
+   "comp": "SpeedPowerController",
+   "cd": "7.8",
+   "subarea": "Speed Control",
+   "scope": [
+    "Schedules the gains of the speed-power PI over the operating range (rotor speed / power), because the sensitivity of the aerodynamic torque to rotor speed changes strongly between cut-in and rated.",
+    "Goal: uniform speed-loop dynamics and stability margin in the whole partial-load region."
+   ],
+   "kpi": [
+    "- Stability margin and closed-loop bandwidth of the speed-power loop at several operating points.",
+    "- Speed tracking and torque activity per wind bin (DLC 1.2a)."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a over the whole partial-load range (each wind bin is a different operating point of the schedule).",
+    "**Medium:** DLC 3.x start-up (low-speed end of the schedule).",
+    "**Lower:** DLC 1.3 ETM.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Same consumers as the Speed-Power PI (OVTASK-159): Converter Interface, Power Control States, Speed Control Scheduler (SpdPwr_VariableGain), GFRT, Inertial Response."
+   ],
+   "affected_by": [
+    "- **Rotor Speed Filter:** RotSpdFi_Spd is the scheduling variable.",
+    "- Rotor aerodynamics and inertia (physical): define the gain the schedule must compensate."
+   ],
+   "risk": [
+    "Schedule not matched to the rotor: too high gain at some operating points (torque oscillations, drivetrain fatigue) or too low (poor tracking, AEP loss)."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+SpeedControl/+SpdPwrCtr/workflow_SpdPwrGS.m"
+   ]
+  },
+  {
+   "key": "OVTASK-162",
+   "name": "Resonance Speed Avoider (RSA)",
+   "comp": "ResonanceSpeedAvoider",
+   "cd": "7.3",
+   "subarea": "Speed Control",
+   "scope": [
+    "Keeps the rotor speed out of resonance windows (rotor 1P / 3P crossing tower frequencies, other configured windows): the speed reference jumps across the window and the speed-power / speed-pitch controllers are scheduled so that the rotor spends little time inside it.",
+    "Windows are defined by the Resonance Speed Window Configuration (centre, limits, power limits, switching times)."
+   ],
+   "kpi": [
+    "- Time spent inside the windows and tower fatigue / nacelle acceleration at the tower frequency (DLC 1.2a around the window speed).",
+    "- Number of window crossings and power / AEP loss.",
+    "- Stability of the crossing (no hunting at the window edges)."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a at the wind speeds where the rotor would run inside the window (3P crossing the tower 1st mode drives tower fatigue).",
+    "**Medium:** DLC 3.x start-up and DLC 4.x shut-down (crossing the window while accelerating / decelerating); DLC 1.3 ETM.",
+    "**Lower:** DLC 1.4 ECD.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Power Controller:** RSA_SpdPwrRef, RSA_PwrMax / Min and RSA_State shape its reference and limits.",
+    "- **Speed-Pitch Controller:** RSA_SpdPitchRef and RSA_SpdPitchCtrlGain move its reference and scale its gains.",
+    "- Pitch Trajectory Tables (opti-pitch at curtailed speed) and other users of RSA_State."
+   ],
+   "affected_by": [
+    "- **Resonance Speed Window Configuration:** window definitions (main input).",
+    "- **Rotor Speed Filter:** filtered speed and lead speed for the state machine.",
+    "- Reduction Interface (active references), Dynamic Power Envelope, Power Trajectory (speed-power curve), Pitch Trajectory Offsets (pitch gap), Active Idle.",
+    "- Tower frequencies (physical): define where the windows must be."
+   ],
+   "risk": [
+    "Window missing or misplaced: operation at tower resonance, high tower fatigue and vibrations. Too wide or too slow crossings: AEP loss and speed / power transients."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-301",
+   "name": "Grid Fault Ride Through (GFRT)",
+   "comp": "GridFaultRideThrough",
+   "cd": "8.2",
+   "subarea": "Grid Support",
+   "scope": [
+    "Handles the controller side of grid voltage faults the converter rides through: it latches the pre-fault speed and power, sets the power reference and ramps during and after the fault (recovery, post-fault), scales the speed-pitch gains and feed-forward against overspeed, and scales the drivetrain and tower dampers.",
+    "Goal: keep the turbine connected and within speed and load limits during and after the dip, and recover power as the grid code requires."
+   ],
+   "kpi": [
+    "- Rotor speed peak and margin to the overspeed monitors during and after the dip (DLC 2.5a LVRT, DLC 2.1g).",
+    "- Power recovery time and ramp vs grid-code requirements.",
+    "- Drivetrain torque and tower loads during the dip and the recovery (dampers scaled).",
+    "- Correct handling of repeated faults."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.5a LVRT (voltage dip: torque drops, the rotor accelerates, then power must recover); DLC 2.1g grid drop (complete loss of torque).",
+    "**Medium:** DLC 2.3 EOG with grid drop (gust and torque loss together).",
+    "**Lower:** DLC 1.2a (no fault: GFRT must stay inactive).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Pitch Controller:** FRTPCtrl__SpdPiGn scales the PI gains; GFRT_State / TimeActPhase drive the grid-fault pitch feed-forward.",
+    "- **Speed-Power Controller:** GFRT power reference, limits and ramps replace the normal ones during and after the fault.",
+    "- **ADTD2** and **Active Tower Damper Side-Side:** gain / saturation scaling and post-fault switching.",
+    "Physically: speed peaks seen by the overspeed monitors and the safety system."
+   ],
+   "affected_by": [
+    "- Converter fault detection (grid dip mode) and the Speed Source Interface (generator speed LSS).",
+    "- **Speed-Power Controller** (pre-fault power and limits), **Power Control States** (regulated power), **Power Estimator** (available power) and Reduction Interface (park curtailment, cut-in speed).",
+    "- **Rotor Speed Filter** (state machine, speed-pitch gain scaling) and **ADTD2** (filtered damper speed).",
+    "- Grid-code requirements (WGPFType selects the post-fault behaviour)."
+   ],
+   "risk": [
+    "Poor fault handling: overspeed alarms or safety trips after grid dips, high drivetrain and tower loads, slow or oscillating power recovery (grid-code non-compliance).",
+    "The function depends on the converter topology: a full converter allows the inherited behaviour; a different topology means re-tuning from scratch."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+GridSupport/workflow_LVRT.m, workflow_MFRT.m"
+   ]
+  },
+  {
+   "key": "OVTASK-310",
+   "name": "Tower Vibration Monitor",
+   "comp": "TowerVibrationMonitor",
+   "cd": "15.22",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Prevents the tower from reaching critical loads: it monitors the fore-aft and side-side nacelle accelerations (slow and fast vibration levels) and stops the turbine when the limits are exceeded.",
+    "Event details (operating state, pitch, speed, wind, yaw error) are logged with each alarm."
+   ],
+   "kpi": [
+    "- Margin between the vibration limits and the accelerations reached in normal and extreme operation (no nuisance stops).",
+    "- Detection of abnormal tower vibration (e.g. resonance, loss of damping) before critical loads."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a / 1.3 (highest normal and extreme-turbulence vibration levels: margin to the limits); DLC 2.x with stops and DLC 4.2 / 5.1 (tower swing after a stop).",
+    "**Medium:** operation near the tower resonance (RSA windows), DLC 2.4 yaw error.",
+    "**Lower:** DLC 6.x idling (side-side vibration in parked conditions).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Turbine stops on tower vibration (availability) and the protection of the tower (no signal link to other control functions)."
+   ],
+   "affected_by": [
+    "- **Nacelle Acceleration Filter** (fore-aft and side-side raw accelerations) and **Nacelle Acceleration Sensor Validation** (status).",
+    "- Speed-Pitch, Speed Source, Wind Speed Filter, Yaw Error Controller, Operation: event data only.",
+    "- Tower frequencies and damping (physical): define the vibration levels in operation."
+   ],
+   "risk": [
+    "Limits too low: nuisance stops and availability loss. Too high: the tower can reach critical loads without protection."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-158",
+   "name": "Operation with Ice (OWI)",
+   "comp": "OperationWithIce_Helper",
+   "cd": "13.2",
+   "subarea": "Operational Scheduling",
+   "scope": [
+    "Handles operation in icing conditions, either for maximum production or for personal safety: depending on the selected type (OpWIceTy) it stops the turbine or keeps it running with adapted operation (pitch offset, speed / power limits, de-icing support, idling start-up).",
+    "Implemented in the legacy STC1 controller; the PLANC model contains a helper that emulates its outputs."
+   ],
+   "kpi": [
+    "- Power production in iced conditions vs the iced power curve.",
+    "- Loads with ice (DLC 1.7 OWI, DLC 6.4o / 7.1o idling with ice) within the design.",
+    "- Correct switching between modes and with the ice detection."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.7 OWI (power production with iced blades: mass imbalance and changed aerodynamics); DLC 6.4o and 7.1o idling with ice.",
+    "**Medium:** DLC 1.2a (no action without ice).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Trajectory Offsets:** OffPitch__OperWIce adds a pitch offset to the minimum pitch (main action in iced operation).",
+    "- **Low Power Detector**, Low Torque Detector, Rotor Performance Monitor: ice / de-icing status and external ice sensor data adapt their detection.",
+    "- **Active Idle:** idling start-up reference with ice."
+   ],
+   "affected_by": [
+    "- Ice detection (Ice Detector, Low Power Detector, external ice sensor) and the OpWIceTy / de-icing type selections.",
+    "- Wind speed (maximum wind for adaptive operation)."
+   ],
+   "risk": [
+    "Wrong pitch offset or limits: loads above design with iced blades or unnecessary production loss. Wrong mode handling: running when a stop is required for safety."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-307",
+   "name": "Flex Configuration",
+   "comp": "FlexConfiguration",
+   "cd": "6.3",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Defines the power concept of the turbine: design power (the rating the turbine is designed and certified for) and rated power (the power it is operated at, flexible below the design power), and provides them as active limits.",
+    "Implemented in the legacy STC1 controller; ActLimit_PwDesign / ActLimit_PwRated are inputs of many functions."
+   ],
+   "kpi": [
+    "- Design and rated power consistent with the confirmed rating, the power envelope and the certification.",
+    "- All functions normalised with the design power behave correctly at the selected rated power."
+   ],
+   "dlcs": [
+    "**High:** power-curve runs and DLC 1.2a (rated power sets the operating point above rated).",
+    "**Medium:** curtailed / flexible-rating cases.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Every function scaled with the design or rated power: Speed-Power Controller, Converter Interface, ACS, HWO, Power Boost, GFRT, Inertial Response, HTRT, Active Tower Damper, Low Power Detector, Controller Functionality Scheduler (GILL power-reference change) and others."
+   ],
+   "affected_by": [],
+   "risk": [
+    "Wrong design or rated power: every normalised function is off-scale (limits, gains, detections) and the turbine operates outside its certified rating."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-131",
+   "name": "Pitch Control States: General Pitch Rate Limits",
+   "comp": "PitchControlStates",
+   "cd": "14.6",
+   "subarea": "Operational States and Transitions",
+   "scope": [
+    "Defines how the pitch is controlled in each operating state (speed regulation, waiting for rpm, active idle, stop, pitch to start, off) and the general pitch-rate limits: maximum positive / negative pitch-reference rates, with adjustments for load reduction (TAL gain), torque mismatch and stop zones.",
+    "These rate limits bound how fast every pitch-based function can act."
+   ],
+   "kpi": [
+    "- Pitch-rate limits consistent with the pitch-system capability and the blade / tower loads in stops.",
+    "- Speed control not saturated by the rate limits in gusts and grid faults (overspeed peaks).",
+    "- Correct state transitions (start-up, stop, idle) without pitch steps."
+   ],
+   "dlcs": [
+    "**High:** DLC 4.x / 5.1 shut-downs and DLC 2.x faults with stop (pitch-out rate sets tower and blade loads and the stopping time); DLC 1.4 / 2.1g (rate limit vs speed-loop demand).",
+    "**Medium:** DLC 3.x start-up (pitch to start, waiting for rpm).",
+    "**Lower:** DLC 1.2a (normal operation rarely at the limit).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Pitch Controller:** pitch states, minimum / maximum pitch and pitch-ramp limits (PitSpec_*, PitCtrl_*) define the envelope of the collective pitch command.",
+    "- **IPC** and **PDA:** state activation ramps; PDA uses the maximum pitch ramp.",
+    "Physically: stopping dynamics and the pitch-system duty."
+   ],
+   "affected_by": [
+    "- **Speed-Pitch Controller:** PitchRefCollective (stop-zone rate limit) and SpdPit_RotSpdErrDsgn (minimum pitch rate).",
+    "- **Tower Acceleration Limiter:** pitch-rate gain; **Pitch Trajectory Offsets:** minimum pitch and load-reduction flag.",
+    "- Active Idle, Reduction Interface (cut-in speed), RSA (speed reference at cut-in), Torque Mismatch Detector."
+   ],
+   "risk": [
+    "Limits too high: pitch-system overload and high tower / blade loads in stops. Too low: speed control saturated, overspeed in gusts and faults, slow stops."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-125",
+   "name": "Speed-Pitch Controller: Aerodynamic Gain Scheduling",
+   "comp": "SpeedPitchController",
+   "cd": "7.7",
+   "subarea": "Speed Control",
+   "scope": [
+    "Schedules the speed-pitch PI gains with the pitch angle, rotor speed and estimated wind speed, compensating the strong change of the aerodynamic sensitivity (dP/dpitch) over the full-load range.",
+    "Goal: the same loop dynamics and stability margin from rated to cut-out."
+   ],
+   "kpi": [
+    "- Stability margin and bandwidth of the speed-pitch loop at operating points from rated to cut-out.",
+    "- Rotor-speed std / max and pitch activity per wind bin above rated (DLC 1.2a)."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a above rated (each wind bin is a different operating point of the schedule); DLC 1.4 / 9.4c (fast movement through the schedule during a gust).",
+    "**Medium:** DLC 1.3 ETM; high-wind operation with HWO (curtailed operating points).",
+    "**Lower:** DLC 1.7 OWI.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Same consumers as the Speed-Pitch Controller (PitchRefCollective): pitch reference limiter, pitch offsets, IPC, load handles and estimators."
+   ],
+   "affected_by": [
+    "- **Wind Speed Estimator:** WinAvail__SpdRotEq (scheduling input).",
+    "- **Rotor Speed Filter:** RotSpdFi_SpdLead (low-pass filtered, scheduling input).",
+    "- Rotor aerodynamics (physical): the schedule comes from the linearised aerodynamic sensitivity."
+   ],
+   "risk": [
+    "Schedule not matched to the rotor: unstable or oscillating speed loop at some wind speeds, or sluggish response (overspeed peaks)."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+SpeedControl/workflow_SpdPitGS.m, workflow_SpdPitGS_Step2.m"
+   ]
+  },
+  {
+   "key": "OVTASK-124",
+   "name": "Speed-Pitch Controller: High Speed Gain",
+   "comp": "SpeedPitchController",
+   "cd": "7.7",
+   "subarea": "Speed Control",
+   "scope": [
+    "Increases the speed-pitch gain when the rotor speed approaches the overspeed region (start offset above the reference, two gain levels), so that the pitch reacts harder only when overspeed is near.",
+    "Goal: lower overspeed peaks in extreme events without making normal operation more aggressive."
+   ],
+   "kpi": [
+    "- Rotor-speed peaks and margin to the controller overspeed monitor in extreme gusts (DLC 9.4c, 1.4).",
+    "- No activation in normal operation (DLC 1.2a) and no pitch chatter when it engages."
+   ],
+   "dlcs": [
+    "**High:** DLC 9.4c ECG frontal passage and DLC 1.4 ECD (sustained gusts drive the speed towards the overspeed limits).",
+    "**Medium:** DLC 2.1g / 2.5a (speed peaks after torque loss).",
+    "**Lower:** DLC 1.2a (must stay inactive).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Speed-Pitch Controller output (PitchRefCollective) near the speed limits; overspeed margins of the monitors."
+   ],
+   "affected_by": [
+    "- **Rotor Speed Filter** (speed error) and the speed-pitch reference; overspeed monitor limits (physical: the region it must protect)."
+   ],
+   "risk": [
+    "Too weak or too late: overspeed stops in extreme gusts. Too strong or too early: pitch chatter and higher loads in normal operation."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+SpeedControl/workflow_HighSpeedGain.m"
+   ]
+  },
+  {
+   "key": "OVTASK-113",
+   "name": "Speed-Pitch Controller: Feed-Forward",
+   "comp": "SpeedPitchController",
+   "cd": "7.7",
+   "subarea": "Speed Control",
+   "scope": [
+    "Adds a pitch feed-forward to the speed-pitch integrator from changes of the effective power reference (and from the pitch trip avoider), and a dedicated feed-forward during grid faults whose gain is scaled with the time to the active overspeed limit.",
+    "Goal: anticipate the aerodynamic torque change when the power reference or the generator torque changes quickly, instead of waiting for the speed error."
+   ],
+   "kpi": [
+    "- Speed peak and recovery after power-reference steps (curtailment, boost, frequency response) and after grid faults.",
+    "- No overspeed alarms during LVRT / grid drop (DLC 2.5a, 2.1g)."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.5a LVRT and DLC 2.1g grid drop (torque drops instantly: the feed-forward pitches before the speed rises).",
+    "**Medium:** power-reference steps (curtailment, park control, frequency response).",
+    "**Lower:** DLC 1.2a.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Speed-Pitch Controller output (PitchRefCollective) during power-reference changes and grid faults."
+   ],
+   "affected_by": [
+    "- **Power Control States:** EffPwrRefChange (effective power-reference change).",
+    "- **Grid Fault Ride Through:** GFRT_State, GFRT_TimeActPhase; **Overspeed Monitor:** OvSpdMon__TtoLim (gain scaling).",
+    "- **Pitch Trip Avoider:** relative pitch feed-forward."
+   ],
+   "risk": [
+    "Too little: overspeed peaks and alarms after grid faults and fast curtailments. Too much: over-pitching, power dips and speed undershoot."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+SpeedControl/workflow_feedForward.m"
+   ]
+  },
+  {
+   "key": "OVTASK-165",
+   "name": "Speed Limit by Collective Pitch (SLCP)",
+   "comp": "SpeedLimitByCollectivePitch",
+   "cd": "6.9",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Curtails the rotor speed as a function of the collective pitch reference, to keep the blades away from the flutter boundary (speed vs pitch) given by Loads.",
+    "Outputs a speed limit to the Reduction Interface (with compensation for the RSA windows)."
+   ],
+   "kpi": [
+    "- Margin of the operating trajectory (speed vs pitch) to the flutter boundary in all operating cases.",
+    "- AEP / speed loss caused by the curtailment."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a and DLC 1.3 at high wind (high pitch and speed together: closest to the flutter boundary); DLC 1.4 / 9.4 (speed peaks at high pitch).",
+    "**Medium:** DLC 2.1g / 2.5a (speed peaks).",
+    "**Lower:** partial load (low pitch).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Reduction Interface:** SLCP__SpdLim enters the minimum of the speed limits (active speed reference for the speed controllers)."
+   ],
+   "affected_by": [
+    "- **Speed-Pitch Controller:** PitchRefCollective (filtered) is the scheduling input (main).",
+    "- RSA window configuration (compensation of the limit around the windows).",
+    "- Flutter boundary from Loads (physical)."
+   ],
+   "risk": [
+    "Missing or too high: operation close to blade flutter (aeroelastic instability, safety). Too conservative: AEP loss at high wind."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+OperationalTrajectories/workflow_SLCP.m"
+   ]
+  },
+  {
+   "key": "OVTASK-156",
+   "name": "Reduction Interface",
+   "comp": "ReductionInterface",
+   "cd": "6.8",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Consolidates every reduction of power and speed (ACS, HWO, SLCP, SLP, safe mode, vibration monitors, frequency control, park pilot, HTRT, idle, boost...) into the active references and limits (ActRef.Power / Speed, ActLimit.*) used by the speed controllers, with minimum speed / power references and local limits.",
+    "Implemented in the legacy STC1 controller (emulated in the PLANC model)."
+   ],
+   "kpi": [
+    "- Correct minimum selection and priority of the reduction sources; smooth transitions between them.",
+    "- Minimum speed references (idle, cut-in) consistent with the RSA windows and the speed-power curve."
+   ],
+   "dlcs": [
+    "**High:** curtailed operation (DLC 9.7 curtailed operation, derated cases) and high-wind operation with HWO.",
+    "**Medium:** DLC 1.3 with ACS active; start-up (cut-in speed).",
+    "**Lower:** DLC 1.2a unconstrained operation.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "All speed and power control: Speed-Power and Speed-Pitch Controllers, Pitch Trajectory Tables (curtailed speed), Power Boost, GFRT, RSA, Overspeed Monitor (adaptive limits from ActRefSpeedRSA) and others reading the active references."
+   ],
+   "affected_by": [
+    "Every reduction source: ACS, HWO, SLCP, SLP, Controller Safe Mode, vibration monitors, Frequency Controller, park pilot, HTRT, Active Idle, Dynamic Power Envelope, Flex Configuration."
+   ],
+   "risk": [
+    "Wrong priority or limits: the turbine follows the wrong reduction (loads above design or unnecessary AEP loss), reference steps, minimum speed inside a resonance window."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-112",
+   "name": "Speed Limit by Power (SLP)",
+   "comp": "SpeedLimitByPower",
+   "cd": "6.10",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Reduces the speed reference during derated power operation, using the power envelope and the aerodynamic tables: when the power is limited, running at full speed would only add loads and noise, and the speed loop would work with a larger margin to overspeed.",
+    "Outputs a speed limit to the Reduction Interface."
+   ],
+   "kpi": [
+    "- Speed vs power in derated operation along the inverse power envelope.",
+    "- Loads in derated operation (blade, tower, DLC 1.4 at derated power) and smooth derate / release transitions.",
+    "- [P] AEP impact when the park derates."
+   ],
+   "dlcs": [
+    "**High:** DLC 9.7 curtailed operation with ECD (gust while derated: speed peak and loads depend on the reduced speed reference); derated-power operation cases.",
+    "**Medium:** DLC 1.4 ECD at derated power.",
+    "**Lower:** DLC 1.2a unconstrained operation (SLP inactive).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Reduction Interface:** SLP_SpdLim enters the minimum of the speed limits (active speed reference of the speed controllers)."
+   ],
+   "affected_by": [
+    "- **Dynamic Power Envelope:** active envelope and status (inverse envelope lookup, main input).",
+    "- **Wind Speed Estimator:** equivalent wind speed (filtered) for the aerodynamic lookup.",
+    "- Reduction Interface and park pilot: power limit and park activation; Flex Configuration (rated power)."
+   ],
+   "risk": [
+    "Speed not reduced: higher loads and overspeed risk in derated operation. Reduced too much: unstable or inefficient operation, speed / power transients at derate and release."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+OperationalScheduling/Workflow_SLP.m"
+   ]
+  },
+  {
+   "key": "OVTASK-129",
+   "name": "Controller Safe Mode",
+   "comp": "ControllerSafeMode",
+   "cd": "6.2",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Defines the fallback operation when a load handle is not available (IPC, PDA, BLL, GILL, TTCC status not OK, blade-load or azimuth sensors invalid): power / speed derating or degradation, pitch tables and boost disable, so that the loads stay within the design without that load handle.",
+    "Outputs the safe-mode reductions to the Reduction Interface / ACS and a safe-mode pitch table."
+   ],
+   "kpi": [
+    "- Loads in safe mode (each load handle disabled) within the design with the derating applied.",
+    "- AEP / availability cost of the safe mode; correct entry and exit conditions."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.1i / 2.4i blade-sensor failure and replication cases (load handles lose their input and the turbine must run in safe mode).",
+    "**Medium:** DLC 1.2a / 1.3 with load handles disabled (fatigue and extremes in derated operation).",
+    "**Lower:** unconstrained operation (safe mode inactive).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Reduction Interface / ACS:** safe-mode power and speed derating / degradation.",
+    "- **Pitch Trajectory Tables:** safe-mode pitch table; **Power Boost:** boost disable."
+   ],
+   "affected_by": [
+    "- **IPC**, **PDA**, **BLL**, **GILL**, **TTCC:** status signals (main inputs: which handle is missing).",
+    "- Moment Transformations and Rotor Azimuth Estimator (sensor status); operating conditions (cut-in / cut-out, idle, rotor speed)."
+   ],
+   "risk": [
+    "Derating too small: loads above design while a load handle is missing. Too large: availability and AEP loss on every sensor fault."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-157",
+   "name": "Pitch Trajectory Tables: Opti-Pitch at Curtailed Speed (OPCS)",
+   "comp": "PitchTrajectoryTables",
+   "cd": "6.5",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Adapts the minimum pitch when the rotor speed is curtailed below nominal (speed reduction by ACS, HWO, SLP, RSA, curtailment): at a lower speed the optimal pitch for a given power is different, and keeping the nominal opti-pitch would lose efficiency or raise loads.",
+    "The curtailed-speed pitch curve is read from the active speed-power curve and the active speed reference."
+   ],
+   "kpi": [
+    "- Aerodynamic efficiency / power in curtailed-speed operation.",
+    "- Loads (thrust, flap) in curtailed operation and smooth activation / deactivation."
+   ],
+   "dlcs": [
+    "**High:** curtailed-speed operation (DLC 9.7 curtailed operation, ACS / HWO curtailment cases).",
+    "**Medium:** DLC 1.3 with ACS active (speed curtailed by ACS).",
+    "**Lower:** DLC 1.2a (OPCS inactive at nominal speed).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Trajectory Offsets:** the curtailed-speed opti-pitch becomes the base of the minimum pitch (OPCS_IsLimiting flag).",
+    "- Inertial Response (OPCS curve for the available-power estimate)."
+   ],
+   "affected_by": [
+    "- **Reduction Interface** (active speed / power references, maximum speed) and **RSA** (speed-power reference, state): activation and operating point.",
+    "- Power Trajectory (active speed-power curve), Air Density, Power Control States."
+   ],
+   "risk": [
+    "Wrong curtailed curve: AEP loss or higher thrust / flap loads whenever the speed is curtailed."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+OperationalTrajectories/workflow_OPCS.m"
+   ]
+  },
+  {
+   "key": "OVTASK-116",
+   "name": "Pitch Trajectory Offsets: Optimal Start Angle (OptiStart)",
+   "comp": "PitchTrajectoryOffsets",
+   "cd": "6.4",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Computes the pitch offset used when the turbine starts (optimal start angle) as a function of the lead-filtered rotor speed and the cut-out speed, so that the rotor accelerates to cut-in quickly without large aerodynamic loads.",
+    "Part of the minimum-pitch calculation of Pitch Trajectory Offsets."
+   ],
+   "kpi": [
+    "- Start-up time to cut-in and loads during the run-up (DLC 3.1 / 3.2 / 3.3).",
+    "- No overspeed or pitch oscillation at the transition to speed control."
+   ],
+   "dlcs": [
+    "**High:** DLC 3.1 NWP start-up, DLC 3.2 EOG and DLC 3.3 EDC start-up (gust or direction change while the rotor runs up).",
+    "**Medium:** start-ups in turbulence (DLC 1.2-like conditions).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- Minimum pitch during start-up (Pitch Control States, Speed-Pitch reference envelope)."
+   ],
+   "affected_by": [
+    "- **Rotor Speed Filter:** RotSpdFi_SpdLead (start-angle calculation).",
+    "- Coupling Conditions (cut-out speed).",
+    "- Rotor aerodynamics and inertia (physical)."
+   ],
+   "risk": [
+    "Start angle too low: high loads and possible overspeed during the run-up. Too high: slow or failed start-ups in low wind (availability)."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-160",
+   "name": "Speed Control Scheduler: Full Power State Machine",
+   "comp": "SpeedControlScheduler",
+   "cd": "7.6",
+   "subarea": "Speed Control",
+   "scope": [
+    "Schedules which speed controller is active: speed-power in regions 1-2, speed-pitch in region 3. The full power state machine (FPSM) decides the transition using the regulated power, the pitch gap to the minimum pitch and the speed error, and builds the speed references of both controllers (with external offsets).",
+    "Goal: smooth, unambiguous switching between power and pitch control around rated."
+   ],
+   "kpi": [
+    "- Smooth transitions at rated (no power dips, speed peaks or limit cycling between the controllers) in DLC 1.2a around rated wind.",
+    "- Power-curve / AEP around rated."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a at wind speeds around rated (continuous switching between regions in turbulence).",
+    "**Medium:** DLC 1.3 ETM; power-reference changes (curtailment, boost).",
+    "**Lower:** high-wind operation.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Pitch Controller** and **Speed-Power Controller:** speed references (SpdRefHa_PitSpeed / PwrSpeed), forced reference changes and resets.",
+    "- Pitch Trajectory Offsets (pitch gap to minimum pitch), ACS."
+   ],
+   "affected_by": [
+    "- **Power Control States:** regulated power; **Speed-Pitch Controller:** PitchRefCollective and its derivative; **Pitch Trajectory Offsets:** minimum pitch.",
+    "- Reduction Interface (active speed reference), external speed offsets (LIDAR, rotor sync), Power Limit by Power Available."
+   ],
+   "risk": [
+    "Wrong thresholds: hunting between the two controllers, power dips and speed peaks around rated, higher drivetrain and tower fatigue."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-328",
+   "name": "Operation (state machine)",
+   "comp": "Operation",
+   "cd": "14.4",
+   "subarea": "Operational States and Transitions",
+   "scope": [
+    "State machine that starts, operates and stops the turbine: start-up sequence, cut-in / cut-out conditions (rotor speed, wind), stop types and stop-ramp selection, idling and kick-start requests.",
+    "Implemented in the legacy STC1 controller (emulated in the PLANC model). The WTGType parameters are the start / stop speeds and wind thresholds."
+   ],
+   "kpi": [
+    "- Start-up and stop sequences complete without overspeed or abnormal loads (DLC 3.x, 4.x, 5.1).",
+    "- Cut-out / restart thresholds at high wind consistent with HWO and the loads.",
+    "- Availability: no unnecessary stops or failed start-ups."
+   ],
+   "dlcs": [
+    "**High:** DLC 3.1-3.3 start-up and DLC 4.1-4.2 / 5.1 shut-downs (sequence and timing set the transient loads).",
+    "**Medium:** DLC 6.x idling (transition to idle) and high-wind cut-out.",
+    "**Lower:** DLC 1.2a.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Every state-dependent function: Pitch Control States, Power Control States (stop ramp), Wind Speed Estimator and monitors (operating state), TAL (stop activation), Power Estimator."
+   ],
+   "affected_by": [
+    "Alarm handler (stop / idle types), converter state, coupling conditions (cut-out speed, coupling allowed), Active Idle and Kick Start."
+   ],
+   "risk": [
+    "Wrong start / stop speeds: failed start-ups, overspeed in start-up, harsh stops (loads) or stops at the wrong wind speed (AEP)."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+OperationalStatesAndTransitions/workflow_SST.m (start / stop timing)"
+   ]
+  },
+  {
+   "key": "OVTASK-108",
+   "name": "Inertial Response (IR)",
+   "comp": "InertialResponse",
+   "cd": "8.6",
+   "subarea": "Grid Support",
+   "scope": [
+    "Provides additional active power during an under-frequency event of the grid (park-level function): the turbine releases rotational kinetic energy for a short time, then recovers speed with a reduced power.",
+    "It estimates the available power and the speed drop it may accept, overrides the speed-power control and adds a pitch offset during the recovery."
+   ],
+   "kpi": [
+    "- Extra power delivered and its duration vs the grid requirement.",
+    "- Rotor-speed drop and recovery (no stall, no stop, no under-speed) and loads during the event."
+   ],
+   "dlcs": [
+    "**High:** inertial-response events at different wind speeds (power boost from kinetic energy and recovery).",
+    "**Medium:** events at low wind (small kinetic energy: risk of under-speed).",
+    "**Lower:** DLC 1.2a (inactive).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Power Controller:** IR_Active, IR_PrefLocal and ramp rates override its power reference (main action).",
+    "- **Converter Interface:** electrical limits during IR.",
+    "- **Pitch Trajectory Offsets:** PitchOffsetIR; Power Control States and Rotor Sync (IR state)."
+   ],
+   "affected_by": [
+    "- Park pilot commands (dip size, ramp rate, inhibit) and the power reference.",
+    "- Available-power estimation inputs: rotor performance tables, opti-pitch / ACS / safe-mode tables, air density.",
+    "- Rotor inertia and generator limits (physical)."
+   ],
+   "risk": [
+    "Too much energy taken: deep speed drop, stall or stop, high loads in the recovery. Too little: grid requirement not met."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+GridSupport/worklow_IR.m"
+   ]
+  },
+  {
+   "key": "OVTASK-330",
+   "name": "Power Control States",
+   "comp": "PowerControlStates",
+   "cd": "14.7",
+   "subarea": "Operational States and Transitions",
+   "scope": [
+    "Defines how the power is controlled in each operating scenario: efficiency regulation on / off, stop ramps (as a function of time, speed or torque), ramp to active idling, effective power-reference change and the regulated power reference sent to the converter.",
+    "The stop ramp sets how fast the generator power is removed when the turbine stops."
+   ],
+   "kpi": [
+    "- Drivetrain torque and tower loads during stop ramps (DLC 4.x, 5.1).",
+    "- Power reference continuity (no steps) and correct effective power-reference change for the pitch feed-forward."
+   ],
+   "dlcs": [
+    "**High:** DLC 4.1 / 4.2 shut-downs and DLC 5.1 emergency stop (power ramp-down vs pitch-out sets drivetrain and tower transients).",
+    "**Medium:** grid events (power reference latched in GFRT).",
+    "**Lower:** DLC 1.2a.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Converter Interface / converter control:** regulated power reference and ramp-down completion (main use).",
+    "- **Speed-Pitch Controller:** EffPwrRefChange drives the pitch feed-forward; Controller Functionality Scheduler (GILL power-reference change).",
+    "- Speed Control Scheduler, GFRT, RSA, Inertial Response, ADTD2 / tower damper scheduling, Pitch Trajectory Tables, Power Boost, Reduction Interface: regulated power as operating-point information."
+   ],
+   "affected_by": [
+    "- **Operation:** stop-ramp state; **Speed-Power Controller:** regulated power.",
+    "- Reduction Interface (active power reference), Flex Configuration, GFRT, Inertial Response, efficiency compensation, Rotor Speed Filter (speed-dependent ramp)."
+   ],
+   "risk": [
+    "Stop ramps too fast: drivetrain torque reversal and tower loads; too slow: overspeed during the stop. Wrong effective power change: wrong feed-forward to the pitch."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-163",
+   "name": "Speed Control Scheduler: Speed Shifter",
+   "comp": "SpeedControlScheduler",
+   "cd": "7.6",
+   "subarea": "Speed Control",
+   "scope": [
+    "Shifts the speed references of the speed-power and speed-pitch controllers (SpdRefHa.PwrSpeed / PitSpeed) apart around rated, with ramp rates depending on power and pitch changes, so that the two controllers do not fight each other and the transition between regions is smooth.",
+    "External offsets (LIDAR, rotor sync, floater motion) are added here."
+   ],
+   "kpi": [
+    "- Speed tracking and controller transitions around rated (DLC 1.2a).",
+    "- No limit cycling between speed-power and speed-pitch; pitch activity at rated."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a around rated wind (where the speed shift acts continuously in turbulence).",
+    "**Medium:** DLC 1.3 ETM; power-reference changes.",
+    "**Lower:** high-wind operation.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Pitch** and **Speed-Power Controllers:** their speed references (the speed-pitch set point is ActRef.Speed + SpeedShift_Pitch)."
+   ],
+   "affected_by": [
+    "- **Power Control States** (regulated power) and **Speed-Pitch Controller** (pitch and its derivative): ramp-rate calculation.",
+    "- Pitch Trajectory Offsets (minimum pitch), Reduction Interface (active speed reference), external speed offsets."
+   ],
+   "risk": [
+    "Shift too small: the two controllers interact (power and pitch oscillations around rated). Too large: speed deviations and AEP loss, overspeed margin reduced."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-135",
+   "name": "Controller Functionality Scheduler",
+   "comp": "ControllerFunctionalityScheduler",
+   "cd": "9.5",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "Coordinates the load handles: priorities between BLL and PDA, GILL and PDA, TTCC and PDA, IPC / PDA activation, allowed IPC and TTCC amplitudes, and sums the individual pitch offsets (IPC, TTCC, PDA) into the per-blade pitch commands.",
+    "Goal: the load handles act together without compounding or cancelling each other."
+   ],
+   "kpi": [
+    "- Loads with all load handles active vs each handle alone (no compounded pitch-out, no loss of protection).",
+    "- Pitch bearing damage and AEP with the chosen priorities."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a / 1.2c (IPC, PDA and TTCC active together: fatigue and clearance); DLC 1.4 and gust cases (GILL / BLL vs PDA priority).",
+    "**Medium:** DLC 2.4 yaw error.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch commands per blade** (FuncSche_PitcAngComA/B/C) and the activation / amplitude inputs of IPC, TTCC and PDA (main use)."
+   ],
+   "affected_by": [
+    "- **IPC**, **TTCC**, **PDA**, **BLL**, **GILL:** their offsets and activation levels.",
+    "- Operation state, IPC-assisted yawing, Power Control States (power-reference change for GILL), Flex Configuration."
+   ],
+   "risk": [
+    "Wrong priorities: compounded pitch-out (AEP loss, overspeed), or PDA cancelling a protective action (extremes, clearance)."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-148",
+   "name": "Active Tower Damper Side-Side (ATD)",
+   "comp": "ActiveTowerDamperSideSide",
+   "cd": "9.3",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "Reduces the tower-base side-side loads by superimposing a damping signal on the power (generator torque) reference: the side-side nacelle acceleration is band-pass filtered around the tower 1st / 2nd modes, phase-shifted and turned into a power oscillation that damps the tower side-side motion.",
+    "Gain scheduled with rotor speed and power; amplitude limited by the power envelope."
+   ],
+   "kpi": [
+    "- Tower-base side-side fatigue (DEL) and damping of the side-side mode (DLC 1.2a, misaligned / low-turbulence cases).",
+    "- Power oscillation amplitude and its use of the power envelope; no excitation of drivetrain modes."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a (side-side fatigue, especially at low turbulence where aerodynamic damping side-side is low).",
+    "**Medium:** DLC 6.x idling (no torque available: ATD inactive) and grid faults (scaled).",
+    "**Lower:** DLC 1.4.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Converter Interface:** PwTwrDamp is added to the power reference (main actuation).",
+    "- **Dynamic Power Envelope:** amplitude estimate for the margin; **Wind Speed Estimator:** the damping power is subtracted from the power input."
+   ],
+   "affected_by": [
+    "- **Nacelle Acceleration Filter:** NacAccFi__AccSsBp (side-side acceleration, main input).",
+    "- **Tower Frequency Estimator:** 1st / 2nd tower frequencies for the filters and their status.",
+    "- Dynamic Power Envelope (power limit), GFRT (scaling), park pilot settings; Power Control States and Rotor Speed Filter only for gain scheduling."
+   ],
+   "risk": [
+    "Wrong phase or gain: no damping or negative damping of the side-side mode (tower fatigue up); too much power oscillation: drivetrain loads, flicker."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-296",
+   "name": "Pitch Reference Limiter",
+   "comp": "PitchReferenceLimiter",
+   "cd": "10.3",
+   "subarea": "Blade Actuation",
+   "scope": [
+    "Keeps each blade pitch reference within the minimum / maximum limits of the pitch system and limits its rate, with a dead-band; combines the collective reference with the individual offsets (service mode).",
+    "It is the last stage before the pitch servo: its rate limit bounds every pitch action."
+   ],
+   "kpi": [
+    "- Rate-limit occupancy of the blade references in gusts, grid faults and stops.",
+    "- No overspeed or load increase caused by the limit; references always within the mechanical limits."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.4 / 9.4 gusts and DLC 2.1g / 2.5a (largest pitch-rate demand of the speed loop).",
+    "**Medium:** DLC 4.x / 5.1 stops.",
+    "**Lower:** DLC 1.2a.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- Pitch servo (references RaPiRefA/B/C) and the Pitch Motion evaluation; physically every pitch-based loop."
+   ],
+   "affected_by": [
+    "- **Speed-Pitch Controller:** PitchRefCollective (main input); Pitch Service Mode offsets.",
+    "- Pitch-system capability (physical limits)."
+   ],
+   "risk": [
+    "Rate limit too low: speed loop and load handles saturated (overspeed, higher loads). Too high: pitch-system overload."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-308",
+   "name": "Power Trajectory: Speed-Power Curve",
+   "comp": "PowerTrajectory",
+   "cd": "6.7",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Defines the power as a function of rotor speed (speed-power curve) that maximises the power extracted by the rotor in partial load, i.e. the optimal tip-speed-ratio trajectory, and the transition to rated.",
+    "It is the reference the speed-power controller follows; the active curve is also read by OPCS, RSA and the power estimator."
+   ],
+   "kpi": [
+    "- Power curve / AEP in partial load (optimal tip-speed ratio).",
+    "- Loads and noise along the curve (rotor speed in partial load)."
+   ],
+   "dlcs": [
+    "**High:** power-curve runs and DLC 1.2a in partial load (AEP).",
+    "**Medium:** DLC 1.2a around rated (transition).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Power Controller** (speed reference along the curve), **Pitch Trajectory Tables** (OPCS), **RSA**, **Power Estimator** (running power curve)."
+   ],
+   "affected_by": [
+    "- Rotor aerodynamics (physical): the optimal curve comes from the power-coefficient tables.",
+    "- Speed-Pitch Controller, Pitch Trajectory Offsets and Reduction Interface (scaling factor of the curve)."
+   ],
+   "risk": [
+    "Sub-optimal curve: AEP loss; too high speeds in partial load: noise and loads."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-115",
+   "name": "Power Trajectory: Scaling of the Speed-Power Curve during Start-Up",
+   "comp": "PowerTrajectory",
+   "cd": "6.7",
+   "subarea": "Operational Trajectories",
+   "scope": [
+    "Scales the speed-power curve during the start-up (after cut-in) so that power is taken gradually while the rotor reaches its operating speed, with a time limit for the scaling.",
+    "Goal: a smooth start without speed undershoot or torque steps."
+   ],
+   "kpi": [
+    "- Start-up time and smoothness (no speed dip, no torque step) in DLC 3.x.",
+    "- Drivetrain torque during the start-up."
+   ],
+   "dlcs": [
+    "**High:** DLC 3.1-3.3 start-up (with NWP, EOG, EDC).",
+    "**Medium:** start-ups in turbulence.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Power Controller:** scaled speed-power curve during start-up."
+   ],
+   "affected_by": [
+    "- Converter state (cut-in detection), Speed-Pitch Controller (pitch and speed reference), Pitch Trajectory Offsets (minimum pitch), Reduction Interface (active speed reference)."
+   ],
+   "risk": [
+    "Wrong scaling: slow start-ups (availability), speed undershoot or torque transients at cut-in."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-288",
+   "name": "Tower Frequency Monitor",
+   "comp": "TowerFrequencyMonitor",
+   "cd": "15.21",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Detects structural changes of the turbine (foundation, tower, bolted joints) through a drift of the estimated tower frequency from its calibrated value, and shuts the turbine down for inspection.",
+    "Calibration is reset when the tower frequency estimator is reset."
+   ],
+   "kpi": [
+    "- Normal frequency scatter (temperature, mass of ice, operating point) vs the alarm threshold: no false alarms.",
+    "- Detection of a frequency drift that indicates a structural change."
+   ],
+   "dlcs": [
+    "**High:** operation over the whole wind range (DLC 1.2a: natural variation of the estimated tower frequency).",
+    "**Medium:** DLC 1.7 OWI (ice mass lowers the frequency).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Turbine stops for inspection (availability, structural safety)."
+   ],
+   "affected_by": [
+    "- **Tower Frequency Estimator:** status and reset (main input).",
+    "- Nacelle Acceleration Sensor Validation (sensor status).",
+    "- Tower and foundation properties (physical)."
+   ],
+   "risk": [
+    "Threshold too tight: false stops. Too loose: structural damage not detected."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-96",
+   "name": "Rotor Sensor Fusion (RSF)",
+   "comp": "RotorSensorFusion",
+   "cd": "3.4",
+   "subarea": "Rotor Measurement and Estimation",
+   "scope": [
+    "Fuses the independent rotor-speed and azimuth measurements (hub, main-shaft, generator, converter, safety-system sensors) into high-quality rotor speed, acceleration and direction estimates, using their validation status.",
+    "The enable mask selects which sources are fused."
+   ],
+   "kpi": [
+    "- Accuracy and noise of the fused speed / acceleration vs the true rotor speed; correct handling of failed sources.",
+    "- Correct rotation-direction detection."
+   ],
+   "dlcs": [
+    "**High:** sensor-failure cases (DLC 2.1i and speed-sensor faults: fusion must reject the failed source).",
+    "**Medium:** DLC 1.2a (normal noise and drivetrain dynamics).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Rotor Speed Filter** (rotor acceleration RSF__RotAcc), **Reverse Rotor Speed Monitor** (rotation direction), Rotor Azimuth Estimator (hub speed estimate)."
+   ],
+   "affected_by": [
+    "- **Speed Measurement Validator:** status of each speed source (main input).",
+    "- Rotor Azimuth Estimator (hub speed).",
+    "- Installed sensors (physical)."
+   ],
+   "risk": [
+    "Wrong fusion or mask: noisy or biased rotor speed / acceleration in all speed-based functions, wrong reaction to a failed sensor."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-291",
+   "name": "Yaw Misalignment Monitor (YMM)",
+   "comp": "YawMisalignmentMonitor",
+   "cd": "15.25",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Monitors the measured misalignment between nacelle and wind direction against allowable limits that depend on wind speed; on large misalignment it adds a pitch offset (load protection) and informs the yaw offset interface.",
+    "Goal: protect the rotor from the loads of large yaw errors (e.g. wind-vane faults, yaw-system problems)."
+   ],
+   "kpi": [
+    "- Loads with large yaw misalignment (DLC 2.4a/b) with the monitor active.",
+    "- No activation in normal yaw tracking (DLC 1.2a); AEP cost of the pitch offset."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.4a/b extreme yaw error (the case the monitor protects against).",
+    "**Medium:** DLC 1.2a (normal yaw errors must not trigger it).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Trajectory Offsets:** PitchOffsetYMM added to the minimum pitch.",
+    "- **Yaw Offset Interface:** large misalignment flags."
+   ],
+   "affected_by": [
+    "- Measured yaw misalignment (wind vane) and **Wind Speed Estimator** (equivalent wind speed, filtered).",
+    "- Operation state and Yaw Offset Interface (activation)."
+   ],
+   "risk": [
+    "Limits too loose: high blade and hub loads with large yaw error. Too tight: unnecessary pitch offsets (AEP)."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-338",
+   "name": "Air Density",
+   "comp": "AirDensity",
+   "cd": "5.1",
+   "subarea": "Weather Measurement and Estimation",
+   "scope": [
+    "Computes the local air density (from temperature and pressure / altitude) and its ratio to the standard density, used to compensate power curves, pitch curves, wind and thrust estimates and detections.",
+    "Implemented in the legacy STC1 controller (emulated in the PLANC model)."
+   ],
+   "kpi": [
+    "- Density ratio vs the site density; correct fallback when the sensors fail.",
+    "- Consistency of the compensated estimates (wind, thrust, power curve) at low and high density."
+   ],
+   "dlcs": [
+    "**High:** power-curve runs at non-standard density (compensation of opti-pitch and power curve).",
+    "**Medium:** DLC 1.2a at low-density sites.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Trajectory Tables** (density-compensated opti-pitch), **Pitch Trajectory Offsets**, **Wind Speed and Thrust Estimators**, **Low Power Detector**, Inertial Response, LIDAR processing."
+   ],
+   "affected_by": [
+    "- Ambient temperature and pressure measurements / site altitude."
+   ],
+   "risk": [
+    "Wrong density: biased wind and thrust estimates, wrong opti-pitch at low density (AEP or loads), false low-power detections."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-278",
+   "name": "Low Power Detector",
+   "comp": "LowPowerDetector",
+   "cd": "15.9",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Detects when the production deviates from the running power curve (degraded performance, ice on the blades), with density and yaw-misalignment compensation and several detection curves (general, ice, anti-ice, de-ice).",
+    "Feeds ice handling and performance alarms."
+   ],
+   "kpi": [
+    "- No false detections in normal operation (scatter of power vs the detection curve, DLC 1.2a).",
+    "- Detection of the power loss caused by ice (DLC 1.7) within the required time."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.7 OWI (iced rotor: the power loss to detect); DLC 1.2a (normal scatter: false alarms).",
+    "**Medium:** curtailed operation (detection disabled or adapted).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Ice-related stops / operation modes (OWI) and performance alarms."
+   ],
+   "affected_by": [
+    "- **Power Estimator:** running power curve points (main reference).",
+    "- **Air Density**, **Wind Speed Estimator** (yaw-misalignment correction), Flex Configuration, Operation with Ice (de-icing status)."
+   ],
+   "risk": [
+    "Too sensitive: false ice / performance stops. Too insensitive: iced operation not detected (ice throw risk, loads)."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-334",
+   "name": "Rotor Azimuth Estimator and Monitor",
+   "comp": "RotorAzimuthEstimator",
+   "cd": "3.3",
+   "subarea": "Rotor Measurement and Estimation",
+   "scope": [
+    "Estimates the rotor azimuth from the available sources (hub orientation / accelerometers, speed integration) with source selection, calibration and phase correction, and monitors its validity.",
+    "The azimuth is needed by every 1P / per-blade function (IPC, TTCC, blade monitors)."
+   ],
+   "kpi": [
+    "- Azimuth error vs the true azimuth over the speed range (phase error at 1P).",
+    "- Correct source switching and status when a source fails."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a (azimuth accuracy for IPC and TTCC timing).",
+    "**Medium:** start-up / low speed (estimation at low rotor speed).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **IPC** (inverse Coleman transform), **TTCC** (azimuth window in front of the tower), Blade Edge Frequency Monitor, Blade Moment Monitor, Controller Safe Mode (status)."
+   ],
+   "affected_by": [
+    "- Hub orientation sensors, **Speed Source Interface** (rotor speed), Rotor Speed Filter (source selection / calibration), Coupling Conditions (cut-out speed)."
+   ],
+   "risk": [
+    "Azimuth phase error: IPC adds load instead of removing it, TTCC pitches the wrong blade; invalid status: load handles fall back to safe mode."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-145",
+   "name": "Active Drive Train Damper (ADTD, legacy)",
+   "comp": null,
+   "cd": "9.1",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "First-generation drivetrain damper implemented in the legacy STC1 controller: it damps drivetrain torsional oscillations by feeding speed oscillations back into the generator torque."
+   ],
+   "kpi": [
+    "- Damping of the drivetrain torsional modes and gearbox torque fatigue, only if the legacy damper is enabled instead of / together with ADTD2."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a (torsional fatigue).",
+    "**Medium:** DLC 2.1g / 2.5a grid faults.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Generator torque reference (legacy STC1 path) and drivetrain loads."
+   ],
+   "affected_by": [
+    "Generator speed measurement and the drivetrain dynamics (physical)."
+   ],
+   "risk": [
+    "If enabled and mistuned: torsional oscillations or interaction with ADTD2. Confirm whether the legacy damper is used at all."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-290",
+   "name": "Wind Speed Monitor",
+   "comp": "WindSpeedMonitor",
+   "cd": "15.24",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Prevents high loads at high wind: from the highest valid measured wind speed (1 s, 30 s, 600 s averages of primary and secondary anemometers) it either curtails the turbine through HWO or stops it, and blocks restarts above the start limit."
+   ],
+   "kpi": [
+    "- Cut-out / restart thresholds consistent with the loads at high wind and with HWO.",
+    "- No unnecessary stops (availability) and no operation above the design wind."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a / 1.3 at the highest operating wind speeds (cut-out limits); DLC 6.x (idling above cut-out).",
+    "**Medium:** DLC 1.4 / 9.4 gusts at high wind (1 s limit).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **High Wind Operator:** active wind limit (WindLim__ActWL6) shifts its trajectories; stops at high wind."
+   ],
+   "affected_by": [
+    "- **Wind Speed Filter** (primary / secondary anemometer averages, main input), Controller Safe Mode (reduced wind limits)."
+   ],
+   "risk": [
+    "Limits too high: operation above the design wind (loads). Too low: AEP loss and frequent stops."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-109",
+   "name": "Active Power Regulation",
+   "comp": null,
+   "cd": "-",
+   "subarea": "Grid Support",
+   "scope": [
+    "Grid-code active-power regulation (set-point tracking, ramp rates, curtailment commands from the park / grid operator) at turbine level.",
+    "Grid option without a milestone in the Tuning Procedure: confirm whether it is needed for the prototype."
+   ],
+   "kpi": [
+    "- Tracking of the active-power set point and ramp rates within the grid-code tolerances.",
+    "- No adverse interaction with the speed controllers (speed / pitch transients on set-point changes)."
+   ],
+   "dlcs": [
+    "**High:** power set-point steps and ramps (curtailment / release).",
+    "**Medium:** DLC 9.7 curtailed operation.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Active power reference (Reduction Interface) and, through it, the speed controllers."
+   ],
+   "affected_by": [
+    "Park controller / grid-operator commands."
+   ],
+   "risk": [
+    "Grid-code non-compliance; speed and pitch transients when the set point changes quickly."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-345",
+   "name": "Rotor Performance Data",
+   "comp": null,
+   "cd": "5.8",
+   "subarea": "Weather Measurement and Estimation",
+   "scope": [
+    "Rotor power and thrust coefficient tables (as a function of wind speed, rotor speed and pitch) used to calculate the wind speed estimate and the thrust estimate (and the available power)."
+   ],
+   "kpi": [
+    "- Tables consistent with the aerodynamic model of the final blade (power and thrust per operating point).",
+    "- Estimators unbiased when fed with these tables (DLC 1.2a)."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a and power-curve runs (estimate accuracy over the operating range).",
+    "**Medium:** DLC 1.7 OWI (iced rotor deviates from the tables).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Wind Speed Estimator**, **Thrust Estimator**, **Power Estimator**, Power Boost, Inertial Response (all use the rotor performance tables)."
+   ],
+   "affected_by": [
+    "Blade aerodynamics (physical): tables generated from the aeroelastic model."
+   ],
+   "risk": [
+    "Wrong tables: biased wind and thrust estimates in every function scheduled on them (speed-pitch gains, HWO, ACS, GILL)."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-277",
+   "name": "Ice Detector",
+   "comp": null,
+   "cd": "15.8",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Detects ice on the blades (from the ice-detection system and turbine signals) because iced blades change the aerodynamics and can throw ice: the turbine is stopped or operated according to the ice-handling type.",
+    "Implemented in the legacy STC1 controller."
+   ],
+   "kpi": [
+    "- Detection of iced conditions and no false detections; correct hand-over to Operation with Ice."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.7 OWI and iced idling (DLC 6.4o / 7.1o).",
+    "**Medium:** —",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Operation with Ice (mode selection), stops for ice."
+   ],
+   "affected_by": [
+    "Ice sensors, Low Power Detector, the IceDeTyp / DeIceTyp type selections."
+   ],
+   "risk": [
+    "Ice not detected: ice throw risk and loads with iced rotor. False detections: availability loss."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-281",
+   "name": "No Cut In Detector",
+   "comp": null,
+   "cd": "15.12",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Detects when the turbine is not connected to the grid and producing power as expected at a given wind speed (e.g. ice, faults preventing cut-in), and raises the corresponding alarm / ice handling."
+   ],
+   "kpi": [
+    "- Detection of a missing cut-in within the expected time at a given wind; no false detections at low wind or during normal start-up delays."
+   ],
+   "dlcs": [
+    "**High:** start-up conditions (DLC 3.x wind range) and iced conditions (DLC 1.7 / idling with ice).",
+    "**Medium:** —",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Alarms and ice handling (availability)."
+   ],
+   "affected_by": [
+    "Wind speed measurement, start-up sequence (Operation), DeIceTyp type selection."
+   ],
+   "risk": [
+    "False alarms: unnecessary stops. Missed detection: turbine idle without reason or iced rotor not handled."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-283",
+   "name": "Power Consumption Monitor",
+   "comp": "PowerConsumptionMonitor",
+   "cd": "15.16",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Disabled in normal operation; enabled when the rotor is motored (rotor positioning, generator-driven turning) to protect against excessive power consumption from the grid."
+   ],
+   "kpi": [
+    "- Power-consumption limit consistent with the motoring operations of the new rotor (inertia, aerodynamic drag)."
+   ],
+   "dlcs": [
+    "**High:** DLC 8.x maintenance (rotor positioning / motoring).",
+    "**Medium:** —",
+    "**Lower:** power production (disabled).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Motoring operations (stop when the consumption is too high)."
+   ],
+   "affected_by": [
+    "Power measurement and the motoring mode (converter / service functions)."
+   ],
+   "risk": [
+    "Limit too low: motoring aborted (service delays). Too high: overload of the drivetrain / converter while motoring."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-97",
+   "name": "Speed Source Interface",
+   "comp": "SpeedSourceInterface",
+   "cd": "3.8",
+   "subarea": "Rotor Measurement and Estimation",
+   "scope": [
+    "Selects which rotor and generator speed signals are used throughout the controller (primary / secondary sources, quality), computes 1 s averages and the low-speed-side generator speed, and disables invalid sources (e.g. on drivetrain oscillation)."
+   ],
+   "kpi": [
+    "- Correct source selection for the installed sensors and correct fallback when a source fails.",
+    "- Delay and noise of the selected speed (affects every speed-based loop)."
+   ],
+   "dlcs": [
+    "**High:** speed-sensor failure cases (DLC 2.1i and speed-sensor faults).",
+    "**Medium:** DLC 1.2a (normal noise and delay).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Rotor Speed Filter** (raw speed), **Overspeed Monitor** (1 s averages), **ADTD2** (generator speed LSS), Wind Speed / Thrust Estimators, ACS, monitors: every speed consumer."
+   ],
+   "affected_by": [
+    "- Installed speed sensors and their validation; Drive Train Oscillation Monitor (disables a source)."
+   ],
+   "risk": [
+    "Wrong source or fallback: wrong or delayed speed in every loop, overspeed protection on a bad signal."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-323",
+   "name": "Blade Moment Monitor",
+   "comp": "BladeMomentMonitor",
+   "cd": "2.3",
+   "subarea": "Blade Measurement and Estimation",
+   "scope": [
+    "Detects faulty or wrongly calibrated blade-root moment signals by comparing the blades with each other (flap and edge imbalances, offsets) per revolution, and sets the blade-load status used by the load handles."
+   ],
+   "kpi": [
+    "- Imbalance thresholds above the normal blade-to-blade scatter (no false faults) and below the calibration error that would harm the load handles."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.1i / 2.4i blade-sensor failure and replication (the faults it must detect).",
+    "**Medium:** DLC 1.2a (normal imbalance from shear, turbulence, pitch errors).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Blade Edge Frequency Monitor** (edge moments and status) and, through the blade status, the load handles using blade moments (BLL, GILL, IPC, TTCC, PDA) and the Controller Safe Mode."
+   ],
+   "affected_by": [
+    "- Blade Load Sensor Driver / calibration, Rotor Azimuth Estimator (status), Wind Speed Estimator."
+   ],
+   "risk": [
+    "Too tight: false sensor faults (load handles off, safe mode, AEP). Too loose: load handles act on wrong moments."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-284",
+   "name": "Reverse Rotor Speed Monitor",
+   "comp": "ReverseRotorSpeedMonitor",
+   "cd": "15.17",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Prevents problems when the rotor runs in the reverse direction (e.g. idling in low wind from behind): counts reverse rotations from the rotation-direction estimate and acts before they cause damage."
+   ],
+   "kpi": [
+    "- Detection of reverse rotation with no false detections at near-zero speed."
+   ],
+   "dlcs": [
+    "**High:** idling / parked cases with wind from the back (DLC 6.x with large yaw error).",
+    "**Medium:** —",
+    "**Lower:** power production.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Stops / actions on reverse rotation."
+   ],
+   "affected_by": [
+    "- **Rotor Sensor Fusion:** rotation direction (RSF_RotDirSt, main input)."
+   ],
+   "risk": [
+    "Missed reverse rotation: damage to bearings / gearbox lubrication. False detections: unnecessary alarms."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-146",
+   "name": "Drive Train Oscillation Monitor (DTOM)",
+   "comp": "DriveTrainOscillationMonitor",
+   "cd": "15.4",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Prevents critical drivetrain oscillations: it band-pass filters the speed signals around the drivetrain modes and stops the turbine (or disables a speed source) when the oscillation exceeds the limits."
+   ],
+   "kpi": [
+    "- Limits above the oscillation levels of normal operation and grid faults (no nuisance stops) and below critical levels; band-pass frequencies on the drivetrain modes of the new design."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.5a LVRT / DLC 2.1g (torque steps excite the drivetrain); DLC 1.2a (normal levels).",
+    "**Medium:** start-up / shut-down transients.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed Source Interface:** DTOMx__Disable invalidates an oscillating speed source; turbine stops."
+   ],
+   "affected_by": [
+    "- Speed signals and the drivetrain modes (physical); ADTD2 (damping reduces the oscillation levels)."
+   ],
+   "risk": [
+    "Too tight: nuisance stops after grid faults. Too loose: drivetrain damage from sustained oscillation."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+FaultDetectionAndAccomodation/workflow_DTOM.m"
+   ]
+  },
+  {
+   "key": "OVTASK-273",
+   "name": "Blade Edge Frequency Monitor",
+   "comp": "BladeEdgeFrequencyMonitor",
+   "cd": "15.1",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Monitors the blade edgewise frequency of each blade (from blade edge moments or accelerations, with azimuth and whirling correction) and detects significant changes that indicate blade damage, then stops the turbine."
+   ],
+   "kpi": [
+    "- Normal scatter of the estimated edge frequency (temperature, ice, operating point) vs the change threshold: no false alarms; detection of the frequency drop that indicates damage."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a over the operating range (natural frequency variation).",
+    "**Medium:** DLC 1.7 OWI (ice lowers the frequency).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Stops for blade inspection (structural safety, availability)."
+   ],
+   "affected_by": [
+    "- **Blade Moment Monitor** (edge moments and blade status, main input), Rotor Azimuth Estimator, Rotor Speed Filter (whirling frequency only).",
+    "- Blade structural properties (physical)."
+   ],
+   "risk": [
+    "Too tight: false stops. Too loose: blade damage not detected."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-274",
+   "name": "Blade Flapwise Vibration Monitor (BFVM)",
+   "comp": "BladeFlapwiseVibrationMonitor",
+   "cd": "15.3",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Prevents the blades from reaching a critical flapwise vibration level (increased fatigue or, in the worst case, instability): on high vibration it adds a pitch offset and reduces the speed, and stops if needed."
+   ],
+   "kpi": [
+    "- Vibration limits above normal operation levels and below critical levels; effectiveness of the pitch offset / speed reduction."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a / 1.3 (normal and extreme flap vibration levels).",
+    "**Medium:** DLC 1.7 OWI (iced blades).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Trajectory Offsets:** BldFlpVb__PitOff; **Reduction Interface:** BldFlpVb__SpdRed (speed reduction)."
+   ],
+   "affected_by": [
+    "Blade flap measurements and Speed-Pitch Controller (event data)."
+   ],
+   "risk": [
+    "Too tight: unnecessary derating. Too loose: blade fatigue or flap instability."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-333",
+   "name": "Order Tracker",
+   "comp": "OrderTracker",
+   "cd": "3.2",
+   "subarea": "Rotor Measurement and Estimation",
+   "scope": [
+    "Estimates the 1P, 2P and 3P amplitudes over time in important signals (e.g. generator speed), tracking the rotor orders as the speed changes; the Order Tracker Monitor uses them to detect rotor imbalance or drivetrain issues."
+   ],
+   "kpi": [
+    "- Amplitude estimates vs the order content of the simulated signals; stable estimates over the speed range."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a (order content in normal operation; rotor imbalance cases if simulated).",
+    "**Medium:** —",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Order Tracker Monitor:** 2P / nP amplitudes of the generator speed (alarms)."
+   ],
+   "affected_by": [
+    "Speed signals, gear ratio (GearType) and the rotor speed."
+   ],
+   "risk": [
+    "Wrong tracking: false imbalance / drivetrain alarms or missed detection."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-344",
+   "name": "Power Inflow Estimator",
+   "comp": "PowerInflowEstimator",
+   "cd": "5.7",
+   "subarea": "Weather Measurement and Estimation",
+   "scope": [
+    "Estimates the aerodynamic power flowing into the rotor from the electrical power and the change of rotational kinetic energy (rotor inertia x speed x acceleration), so that the wind estimate is not disturbed by speed transients."
+   ],
+   "kpi": [
+    "- Power-inflow estimate vs the aerodynamic power of the simulation, especially during speed transients."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a and DLC 1.4 (speed transients where electrical power differs from aerodynamic power).",
+    "**Medium:** grid faults.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Wind Speed Estimator:** PwrInflow_PwrEst as power input (and through it every wind-scheduled function)."
+   ],
+   "affected_by": [
+    "Electrical power, rotor speed / acceleration and the rotor-system inertia (physical)."
+   ],
+   "risk": [
+    "Wrong inertia: biased wind estimate during accelerations (gain scheduling, HWO, ACS)."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-335",
+   "name": "Speed Measurement Validator",
+   "comp": "SpeedMeasurementValidator",
+   "cd": "3.6",
+   "subarea": "Rotor Measurement and Estimation",
+   "scope": [
+    "Validates each rotor-speed measurement source (hub, main shaft, generator, converter, safety-system sensors) and provides its status, so that only valid sources are used."
+   ],
+   "kpi": [
+    "- Correct detection of failed or implausible sources with no false invalidations."
+   ],
+   "dlcs": [
+    "**High:** speed-sensor failure cases.",
+    "**Medium:** DLC 1.2a (normal scatter between sources).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Rotor Sensor Fusion:** status of each source (which sources are fused)."
+   ],
+   "affected_by": [
+    "Installed speed sensors (physical)."
+   ],
+   "risk": [
+    "False invalidation: degraded speed estimate; missed fault: bad source used for control and protection."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-276",
+   "name": "Gearbox Slip Monitor",
+   "comp": "GearboxSlipMonitor",
+   "cd": "15.7",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Prevents the generator side and the rotor side of the drivetrain from slipping relative to each other (slip in the gearbox / shaft connection), which would introduce high loads, by comparing the two speeds / angles."
+   ],
+   "kpi": [
+    "- Slip limit above the normal torsional deflection and measurement differences; detection of real slip."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.5a / 2.1g (large torque steps: largest torsional deflection).",
+    "**Medium:** DLC 1.2a.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Turbine stops on slip (drivetrain protection)."
+   ],
+   "affected_by": [
+    "Rotor-side and generator-side speed / angle measurements, gear ratio, drivetrain stiffness (physical)."
+   ],
+   "risk": [
+    "Too tight: false stops after torque transients. Too loose: drivetrain damage not detected."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-286",
+   "name": "Rotor Performance Monitor",
+   "comp": "RotorPerformanceMonitor",
+   "cd": "15.19",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Detects when the rotor does not perform as expected (wind-speed estimate vs measured wind, e.g. ice or blade degradation); currently in observer mode."
+   ],
+   "kpi": [
+    "- Detection thresholds above the normal scatter between estimated and measured wind; detection of iced or degraded rotors."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.7 OWI (iced rotor performance).",
+    "**Medium:** DLC 1.2a (normal scatter).",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Performance / ice information (observer mode: no control action)."
+   ],
+   "affected_by": [
+    "- **Wind Speed Estimator** (filtered estimate and status), wind measurement, Operation with Ice (external ice sensor data)."
+   ],
+   "risk": [
+    "Observer mode: wrong thresholds only produce wrong information, no control action."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-336",
+   "name": "Speed Mismatch Monitor",
+   "comp": "SpeedMismatchMonitor",
+   "cd": "3.7",
+   "subarea": "Rotor Measurement and Estimation",
+   "scope": [
+    "Identifies mismatches between the rotor-speed measurements of different sources (e.g. rotor vs generator speed through the gear ratio) and raises alarms, so that a faulty sensor or drivetrain problem is detected."
+   ],
+   "kpi": [
+    "- Mismatch limits above normal differences (torsional dynamics, measurement noise) and below fault levels."
+   ],
+   "dlcs": [
+    "**High:** speed-sensor failure cases and DLC 2.5a / 2.1g (torsional transients create apparent mismatch).",
+    "**Medium:** DLC 1.2a.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "Alarms / source handling (Speed Source Interface)."
+   ],
+   "affected_by": [
+    "Speed sources and their selection."
+   ],
+   "risk": [
+    "Too tight: false alarms after transients. Too loose: faulty speed sensor not detected."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-151",
+   "name": "Blade Edgewise Vibration Monitor (BEVM)",
+   "comp": "BladeEdgewiseVibrationMonitor",
+   "cd": "15.2",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Prevents the blades from reaching a critical edgewise vibration level (fatigue or, in the worst case, edgewise instability): it band-pass filters the blade edge signals around the edgewise modes and, above the limits, adds a pitch offset, reduces the speed or stops the turbine."
+   ],
+   "kpi": [
+    "- Vibration limits above the normal edgewise levels in operation and idling, and below critical levels.",
+    "- Effectiveness of the pitch offset / speed reduction on the edgewise vibration."
+   ],
+   "dlcs": [
+    "**High:** DLC 6.x idling and parked with large yaw / inflow angles (edgewise vibration risk is highest in standstill and idling); DLC 1.7 OWI and 1.2a.",
+    "**Medium:** DLC 8.x maintenance positions.",
+    "**Lower:** others.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Trajectory Offsets:** OffPitch_EdgVbMon; **Reduction Interface:** GSVibrat__SpdRed (speed reduction); stops."
+   ],
+   "affected_by": [
+    "- Blade edge moments / accelerations, Speed Source Interface (rotor speed for the 1P band-stop), Speed-Pitch Controller (pitch-angle compensation and event data).",
+    "- Blade edgewise modes (physical)."
+   ],
+   "risk": [
+    "Too tight: unnecessary derating / stops. Too loose: edgewise vibrations not stopped (blade damage)."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+FaultDetectionAndAccomodation/workflow_BEVM.m"
+   ]
+  },
+  {
+   "key": "OVTASK-101",
+   "name": "High Temperature Ride Through (HTRT)",
+   "comp": "HighTemperatureRideThrough",
+   "cd": "12.5",
+   "subarea": "Power System Actuation",
+   "scope": [
+    "Extends the operational area at high ambient temperatures: instead of stopping when components get hot, the turbine is derated (power reduction) based on thermal models of the electrical components; it can also enable a speed boost in curtailment."
+   ],
+   "kpi": [
+    "- Component temperatures within limits with the derating; production kept instead of stops at high temperature."
+   ],
+   "dlcs": [
+    "**High:** high-temperature operation scenarios (not a load DLC; thermal cases).",
+    "**Medium:** —",
+    "**Lower:** load DLCs (not affected).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Reduction Interface:** HTRTCtrl__PRedDera (power derating); **Power Boost:** speed-boost activation."
+   ],
+   "affected_by": [
+    "- Component temperatures and thermal models (HTRTType selects the configuration), rated / design power."
+   ],
+   "risk": [
+    "Derating too late: component over-temperature and trips. Too early: AEP loss in hot climates."
+   ],
+   "workflow": []
+  },
+  {
+   "key": "OVTASK-121",
+   "name": "Rotor Speed Filter",
+   "comp": "RotorSpeedFilter",
+   "cd": "3.5",
+   "subarea": "Rotor Measurement and Estimation",
+   "scope": [
+    "Filters the measured rotor speed and rotor acceleration with a chain of band-stop (notch) filters at 3P, 6P, the 1st-3rd edgewise symmetric frequencies (1ES-3ES, centre frequencies estimated online by ESFE) and the tower 2nd mode (from the Tower Frequency Estimator), a generic band-stop, a low-pass and a lead filter.",
+    "Goal: remove the harmonic and structural content that would excite the control loops and the structure, without adding phase delay that degrades the speed control."
+   ],
+   "kpi": [
+    "- Phase delay and gain of the filter chain (with and without lead filter) at the speed-loop crossover frequency.",
+    "- Attenuation of the rotor-speed spectrum at 3P, 6P, 1ES-3ES and the tower 2nd frequency, before vs after (DLC 1.2a).",
+    "- [P] Rotor speed std / max per wind bin (DLC 1.2a) and speed peak in gusts (DLC 1.4, 9.4w) not worse than the reference.",
+    "- [P] Pitch activity (RMS pitch rate) and fatigue of blade-root edgewise, pitch bearing, drivetrain and tower-base fore-aft in DLC 1.2a."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a normal turbulence (the rotor-speed spectrum carries 3P, edgewise and tower content; whatever passes the filters becomes pitch and torque activity and fatigue of pitch bearings, blades and drivetrain); DLC 1.4 ECD and DLC 9.4w extreme ECD with turbulence (the gust response of the speed loop depends on the phase of the filtered speed; ACS and the controller overspeed monitor are disabled, so the speed loop alone drives the tower and blade extremes).",
+    "**Medium:** DLC 2.1g grid drop and DLC 2.5a LVRT (torque is lost and the rotor accelerates fast: filter delay increases the speed peak seen by the speed-pitch loop and GFRT); DLC 1.3 ETM (large speed excursions in extreme turbulence).",
+    "**Lower:** DLC 1.2 NTM (baseline robustness); DLC 1.7 OWI (ice mass lowers the blade edgewise frequencies: the notches must follow the ESFE estimate).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Pitch Controller:** RotSpdFi_SpdLead is the speed feedback of the PI (speed error, reference saturation and ramping) and, low-pass filtered, a gain-scheduling input: filter phase and lead gain set the loop margin and the gust response.",
+    "- **Speed-Power Controller:** RotSpdFi_Spd is its PI feedback and gain-scheduling input; RotSpdFi_SpdLead selects the operating point on the active power envelope.",
+    "- **Converter Interface:** RotSpdFi_Spd converts the power reference into the generator torque reference and the electrical limits: filter delay or residual ripple appears directly in the torque and the drivetrain loads.",
+    "- **Resonance Speed Avoider:** the RSA state machine and the window speed references use the filtered speed: delay causes late window crossings and more time near the tower resonance.",
+    "- **ESFE:** SpdFilt_nPGnrcSpd is the signal ESFE estimates the edgewise frequencies from (closed loop with the 1ES-3ES notches).",
+    "- **Grid Fault Ride Through** (state machine and speed-pitch gain scaling during grid faults) and Power Control States (speed-dependent stop ramp).",
+    "**Only scheduling or nP frequency** (they need the correct mean speed, not the filter dynamics): ADTD2 (3P notch frequency and lead-factor scheduling; its damping algorithm uses the unfiltered GenSdSpd_ValueLSS), Active Tower Damper Side-Side (gain proportional to rotor speed), BLL (3P dead-band), GILL (3P / 6P / 9P tracking notches on the blade moments; the RotAcc type that would use RotAccFi__Acc is disabled), IPC and TTCC (3P frequency, azimuth shift), Nacelle Acceleration Filter (nP tracking notches), PDA (speed activation level).",
+    "The Controller Overspeed Monitor (listed in the Jira example) does not use the filtered speed: it monitors the 1 s averages of the Speed Source Interface."
+   ],
+   "affected_by": [
+    "- **Speed Source Interface:** RotSpd_Value is the raw speed entering the filter chain (source selection and its delay).",
+    "- **ESFE:** ESFE_Freq1ES-3ES are the centre frequencies of the 1ES-3ES notches; a wrong estimate moves the notch away from the mode.",
+    "- **Tower Frequency Estimator:** TwrFrqPr_Freq2nd / Stat2nd place the tower 2nd-mode notch.",
+    "- Rotor Sensor Fusion (RSF__RotAcc, rotor acceleration path) and the design rotor speed (3P / 6P notch frequencies)."
+   ],
+   "risk": [
+    "**Band-stop filters (3P, 6P, 1ES-3ES, tower 2nd):** a mistuned notch lets harmonic or structural content into the pitch and power control: unintended pitch and power contributions, higher pitch bearing damage and excitation of blades, tower and drivetrain (fatigue, reduced lifetime). Too wide notches add phase delay to the speed loop.",
+    "**Low-pass filter:** too low a cut-off delays the speed response, reduces stability and can lead to overspeed; too high a cut-off leaves high-frequency content in the speed signal (pitch bearing damage, excitation of blades, tower and drivetrain).",
+    "**Lead filter:** too little lead gives delayed, less aggressive pitch reactions to gusts and higher extreme loads (DLC 1.4), especially without LOPC sensors; too much lead amplifies high-frequency content (pitch activity, fatigue)."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+RotorMeasurementAndEstimation/workflow_SpdFilt.m"
+   ]
+  },
+  {
+   "key": "OVTASK-122",
+   "name": "Speed-Pitch Controller (PI)",
+   "comp": "SpeedPitchController",
+   "cd": "7.7",
+   "subarea": "Speed Control",
+   "scope": [
+    "Controls the rotor speed with the collective pitch when the turbine is at rated power or at the active power reference: a PI controller with gain scheduling (pitch angle, rotor speed, wind speed) that tracks the speed-pitch set point SpdRefHa.PitSpeed = ActRef.Speed + SpeedShift_Pitch.",
+    "Includes a pitch feed-forward on effective power-reference changes, a feed-forward against overspeed during grid faults (gain scaled with the time to the overspeed limit) and a High Speed Gain near the speed limits. Its output PitchRefCollective is the base of every pitch command."
+   ],
+   "kpi": [
+    "- Rotor speed mean, std and max per wind bin vs the active reference (DLC 1.2a).",
+    "- Overspeed peak (DLC 1.2a, 1.4) and time above the allowed high-speed region (flutter boundary).",
+    "- Tower-base fore-aft extreme in DLC 1.4.",
+    "- Constraints: pitch activity (RMS and max pitch rate, time at the pitch-rate limit), AEP, tower fore-aft fatigue in DLC 1.2a, no controller or safety overspeed alarm during grid faults (DLC 2.5).",
+    "- [P] Gain and phase margins of the linearised loop over the operating range."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a normal turbulence (speed regulation, pitch activity and tower fatigue); DLC 1.4 ECD (the speed peak and the tower fore-aft extreme in a gust depend on the loop bandwidth); DLC 2.5a LVRT and DLC 2.1g grid drop (generator torque is lost, so pitch is the only means to stop the acceleration); DLC 9.4c ECG frontal passage (a sustained gust pushes the speed towards the limits where the High Speed Gain acts).",
+    "**Medium:** DLC 1.3 ETM (large speed excursions); DLC 2.4a/b extreme yaw error (skewed inflow lowers the aerodynamic gain the scheduling assumes); DLC 2.1c controller overspeed.",
+    "**Lower:** DLC 1.2 NTM (robustness); DLC 1.7 OWI (iced blades change the aerodynamic gain).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Reference Limiter:** saturates and rate-limits each blade reference built on PitchRefCollective (the command sent to the pitch system).",
+    "- **Pitch Trajectory Offsets:** the load-handle offsets and minimum-pitch shift are applied on top of PitchRefCollective; MinPitchLimitActive drives the pitch-limit-by-wind logic.",
+    "- **IPC:** cyclic pitch on top of the collective; its amplitude limits use the collective pitch.",
+    "- **Pitch Control States:** stop-zone pitch-rate limits and the minimum pitch rate (SpdPit_RotSpdErrDsgn).",
+    "**Pitch as operating-point / scheduling variable** (their behaviour shifts when the pitch behaviour changes): Wind Speed and Thrust Estimators (aerodynamic tables; their estimates schedule other functions), GILL (gain scheduling of the BLS type), TAL and PDA (activation level), SLCP (speed curtailment from the collective pitch, flutter boundary), Power Trajectory (speed-power curve scaling with SpdPitch__SpdRefSR), Speed Control Scheduler (pitch derivative sets the power / speed ramp rate), RSA (pitch gap buffer), Power Boost criteria, GFRT (ActSpdRefPitCtrl in the gain scaling).",
+    "Monitors (overspeed, blade and tower vibration) use PitchRefCollective only for event data."
+   ],
+   "affected_by": [
+    "- **Rotor Speed Filter:** RotSpdFi_SpdLead is the speed feedback and a gain-scheduling input.",
+    "- **Pitch Servo Controller:** the actuator dynamics are inside the speed loop (physical coupling, no signal link).",
+    "- **Wind Speed Estimator:** WinAvail__SpdRotEq is a gain-scheduling input.",
+    "- **Resonance Speed Avoider:** RSA_SpdPitchCtrlGain scales the gains and RSA_SpdPitchRef moves the speed reference.",
+    "- **Grid Fault Ride Through:** FRTPCtrl__SpdPiGn scales the gains, GFRT_State and GFRT_TimeActPhase drive the grid-fault feed-forward.",
+    "- **Overspeed Monitor:** OvSpdMon__TtoLim (time to the active overspeed limit) scales the pitch feed-forward gain.",
+    "- Power Control States (EffPwrRefChange feed-forward), Pitch Trip Avoider (feed-forward), Torque Mismatch Detector (gain modification), Pitch Control States (states, pitch limits and ramps), Speed Control Scheduler (forced reference change)."
+   ],
+   "risk": [
+    "Too soft: larger speed excursions, overspeed peaks, alarms or stops in gusts and grid faults, higher tower fore-aft extremes in DLC 1.4.",
+    "Too aggressive: pitch chatter and rate-limit saturation, pitch bearing and actuator damage, higher tower fatigue, interaction with the tower mode.",
+    "Gain scheduling not matched to the rotor (aerodynamic sensitivity, inertia): loss of stability margin in parts of the envelope. Grid-fault feed-forward or High Speed Gain mistuned: overspeed alarms during LVRT or near the limits."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+SpeedControl/workflow_SpdPitCtr.m",
+    "workflow_SpdPitGS.m, workflow_SpdPitGS_Step2.m",
+    "workflow_HighSpeedGain.m, workflow_polePlacement.m, workflow_feedForward.m"
+   ]
+  },
+  {
+   "key": "OVTASK-127",
+   "name": "Blade Load Limiter (BLL)",
+   "comp": "BladeLoadLimiter",
+   "cd": "9.4",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "Reduces extreme blade flap (out-of-plane) loads and tip deflection, mainly caused by extreme yaw error or turbulence: it estimates the peak out-of-plane moment of each blade and, when it exceeds a load threshold, adds a collective pitch offset to the minimum pitch limit.",
+    "Trade-off: a limited, controlled loss of aerodynamic efficiency (design rule: AEP loss at most 0.2 % in DLC 1.2a)."
+   ],
+   "kpi": [
+    "- Blade-root flap extreme and tip-to-tower clearance in DLC 1.2a / 1.2c and their extrapolation (DLC 1.1).",
+    "- AEP loss at most 0.2 % in DLC 1.2a.",
+    "- Activation statistics and pitch offset magnitude / duration vs wind speed.",
+    "- Robustness to blade-load sensor uncertainty (thresholds x1.08).",
+    "- [P] Pitch activity and interaction with PDA, GILL and TTCC (combined pitch offsets)."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.2a normal turbulence and DLC 1.2c steep shear (flap extremes and tip clearance in normal operation, and the extrapolated extremes of DLC 1.1); DLC 1.2b and 1.2c with thresholds x1.08 (blade-load sensor uncertainty: the protection must still work with the measurement error).",
+    "**Medium:** DLC 2.4a/b extreme yaw error (large flap moments from skewed inflow, a main BLL driver); DLC 1.3 ETM; DLC 1.5 EWS (shear raises the flap moment of the upper blade).",
+    "**Lower:** DLC 1.4 ECD (gust extremes are mainly handled by GILL and TTCC).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Trajectory Offsets:** BLL_PitchOff is combined with the other load offsets and shifts the minimum pitch / PitchRefCollective.",
+    "- **Controller Functionality Scheduler:** BLL / PDA prioritisation uses BLL_PitchOff and its rate.",
+    "- **Controller Safe Mode:** BLL_Status triggers the safe-mode derating when the blade-load signals are not valid.",
+    "- Indirectly the Speed-Pitch Controller (raised minimum pitch) and AEP."
+   ],
+   "affected_by": [
+    "- **Moment Transformations:** MomTrans_A/B/COopMom are the out-of-plane moments the peak estimate is built on; MomTStat_* are their status (validity check).",
+    "- **Blade Load Sensor Driver / calibration:** absolute thresholds are only meaningful with calibrated blade loads.",
+    "- **Speed-Pitch Controller and Pitch Trajectory Tables:** physical coupling: BLL acts on top of the collective pitch and the minimum-pitch baseline, which must be final first.",
+    "- Rotor Speed Filter only for the 3P dead-band of the peak estimate."
+   ],
+   "risk": [
+    "Threshold too low: unnecessary pitch-out and AEP loss above the design rule. Threshold too high: flap extremes and tip-tower clearance not protected.",
+    "Aggressive filter dynamics: unnecessary pitch activity and actuator wear. Adverse interaction with PDA or GILL (compounded pitch-out) and shift of the operating point that raises tower loads."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+LoadReductionHandles/workflow_autoTune_BLL.m"
+   ]
+  },
+  {
+   "key": "OVTASK-130",
+   "name": "Gust Induced Load Limiter (GILL)",
+   "comp": "GustInducedLoadLimiter",
+   "cd": "9.9",
+   "subarea": "Load Reduction Handles",
+   "scope": [
+    "Mitigates tower fore-aft extreme loads in gusts: it computes a collective pitch offset from positive changes of the average blade out-of-plane moment (BLS type, GILL.AvMomCng) and adds it to the minimum pitch limit. A second type based on rotor acceleration exists but is disabled.",
+    "GILL reacts to how fast thrust increases, not to the thrust level: a transient extreme-load function that must not act in normal turbulent operation."
+   ],
+   "kpi": [
+    "- Tower-base fore-aft and blade-root extremes in the gust DLCs, GILL on vs off.",
+    "- Activation in normal operation: share of time with GILL.PitchOff > 0 per wind bin in DLC 1.2a and the power-curve runs (must be minimal).",
+    "- AEP and pitch activity (RMS and max pitch rate).",
+    "- Detection timing: GILL.AvMomCng vs the gust front and clean release of the offset."
+   ],
+   "dlcs": [
+    "**High:** DLC 1.4 ECD (a fast thrust rise excites the tower fore-aft mode: the design-driving tower extreme GILL is made for); DLC 2.3 EOG with grid drop (gust plus torque loss: thrust and speed rise together); DLC 9.4 extreme gusts.",
+    "**Medium:** DLC 1.2a and the power-curve runs (no activation and no AEP loss in normal turbulence); DLC 3.x start-up with EOG / EDC (gust while the rotor is accelerating); DLC 1.3 ETM.",
+    "**Lower:** DLC 1.5 EWS (shear changes are slow compared with a gust front).",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Pitch Trajectory Offsets:** GILL__PitchOff is combined with the other load offsets and shifts the minimum pitch / PitchRefCollective.",
+    "- **Controller Functionality Scheduler:** GILL / PDA prioritisation.",
+    "- **Controller Safe Mode:** GILL__BLSSt (BLS status) triggers the safe-mode derating.",
+    "- Indirectly the tower response shared with TAL and the Speed-Pitch Controller, and AEP."
+   ],
+   "affected_by": [
+    "- **Moment Transformations:** MomTrans_A/B/COopMom form the average out-of-plane moment (after band-stop filtering) whose rate is the GILL detection signal; MomTStat_* are their status.",
+    "- **Speed-Pitch Controller:** PitchRefCollective is the gain-scheduling input of the BLS type.",
+    "- **Controller Functionality Scheduler:** GILL off flags (status handling).",
+    "- Rotor Speed Filter only for the 3P / 6P / 9P tracking notches; Thrust Estimator only for the disabled rotor-acceleration type."
+   ],
+   "risk": [
+    "Thresholds too low or filter too fast: activation in normal turbulence, AEP loss and pitch wear. Thresholds too high or filter too slow: delayed response (about 0.1 s penalty in gust cases), tower extremes not shaved.",
+    "Poor gain scheduling: uneven load reduction over the wind-speed range. Compounded pitch-out with BLL / PDA if not coordinated."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+LoadReductionHandles/workflow_GILL.m, workflow_autoTune_GILL.m, workflow_GILL_GainScheduling.m"
+   ]
+  },
+  {
+   "key": "OVTASK-123",
+   "name": "Controller Overspeed Monitor",
+   "comp": "OverspeedMonitor",
+   "cd": "15.14",
+   "subarea": "Fault Detection and Accommodation",
+   "scope": [
+    "Primary protection layer against rotor overspeed: two monitors on the primary and two on the secondary speed source (1 s averages) stop the turbine (Alm116031 waiting / Alm116032 stopped) before critical speeds cause extreme or fatigue loads. The secondary layer is the safety system (SRSG, Alm114041; LMU, Alm114018).",
+    "The limits are relative to the active speed reference and dynamic (DynLim01-03); the monitor also provides the time to the active limit and the active limits to other functions."
+   ],
+   "kpi": [
+    "- Margin between the thresholds and the maximum 1 s-average rotor speed: low-threshold monitor at least x1.07 over normal turbulence (DLC 1.2 / 1.2a / 1.2c) and x1.05 over extreme turbulence, gusts and shear (DLC 1.3, 1.4, 1.5, 9.4c); high-threshold monitor at least x1.02 over grid drop (DLC 2.1g) and x1.05 over LVRT (DLC 2.5).",
+    "- Thresholds below the safety system (SRSG / LMU) and the converter overspeed trip, so the controller layer acts first.",
+    "- No nuisance overspeed alarm in normal operation; overspeed detected in the overspeed fault case (DLC 2.1c)."
+   ],
+   "dlcs": [
+    "**High:** DLC 2.1c controller overspeed (fault case: the monitor must act); DLC 2.1g grid drop and DLC 2.5a LVRT (torque loss gives the highest speed peaks: high threshold); DLC 1.2 / 1.2a / 1.2c, 1.3, 1.4, 1.5 and 9.4c (normal and extreme operation must stay below the low threshold).",
+    "**Medium:** DLC 2.2 safety-system overspeed (order of the two protection layers).",
+    "**Lower:** DLC 1.7 OWI.",
+    "The controller overspeed monitor is disabled in most load cases, so the loads do not include its stops: the margins are checked with the monitor enabled.",
+    "[P] Classification proposed."
+   ],
+   "affects": [
+    "- **Speed-Pitch Controller:** OvSpdMon__TtoLim (time to the active limit) scales the pitch feed-forward gain.",
+    "- **Pitch Damage Attenuator:** OvSpdMon__Lim1 sets the rotor-speed activation level.",
+    "- **Grid Forming Operator:** OvSpdMon__ActLim defines its overspeed limits.",
+    "- Availability and AEP (overspeed stops) and the protection-layer order with the safety system."
+   ],
+   "affected_by": [
+    "- **Speed Source Interface:** RotSpdPr__1sAvg and RotSpdSe__1sAvg are the monitored speeds.",
+    "- **Reduction Interface:** ActRefSpeedRSA is the reference the adaptive low and high limits are computed from.",
+    "- **Grid Fault Ride Through / converter:** GFRT_iDipMode and the converter mode select the limits during grid dips.",
+    "- **Speed-Pitch Controller and the load handles** (BLL, GILL, IPC, TTCC, PDA, TAL): physical coupling: they set the speed peaks the margins are measured on (PitchRefCollective itself is only used for alarm event data)."
+   ],
+   "risk": [
+    "Too low: nuisance overspeed stops (availability, AEP) and extra loads from the stops. Too high: no primary protection; the safety system trips instead (harder stops, higher loads) or the design overspeed is exceeded."
+   ],
+   "workflow": [
+    "+Workflows/+ControllerTuning/+FaultDetectionAndAccomodation/workflow_OverspeedMonitor.m"
+   ]
+  }
+ ]
+}
