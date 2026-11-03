@@ -3,9 +3,10 @@
 Read together with `CLAUDE.md`. Section 0 is the current state; then the timeline, decisions, reference numbers, domain
 knowledge and ideas.
 
-## 0. Current state (03-Nov-2026)
-- **Version 1.1.0** (local commit, not pushed): tuning overview per function + load cases (DLCs) of simulation folders.
-  Exe built and tested (starts, shows the overview with the project DLCs); headless build OK; smoke test OK.
+## 0. Current state (03-Nov-2026, evening)
+- **Version 1.2.0** (local commit, not pushed): "Highly affected functionalities / by" rewritten as tuning couplings with
+  the physical reason (113 couplings), model-link sections removed from the overview, new graph mode "tuning couplings".
+- **Version 1.1.0** (tagged locally by the user): tuning overview per function + load cases (DLCs) of simulation folders.
 - **Version 1.0.0** was released on GitHub on 02-Nov-2026.
 - **Repository:** the user's personal GitHub. The `.exe` goes in the release assets; company data is never committed.
 - **Open points:**
@@ -46,6 +47,15 @@ type values.
   - PyInstaller onefile exe.
 - **02-Nov-2026:** the tool moved to `D:\PYTHON_functions_epm\PLANC_Dependency_Explorer`, plus CLAUDE.md, HISTORY.md, the
   smoke test and the git repo.
+- **03-Nov-2026 evening, v1.2.0. The user's correction:** in OVTASK-122 the overview said the Speed-Pitch Controller
+  highly affects the Pitch Reference Limiter because the limiter uses PitchRefCollective. The user: "Highly affected
+  functionalities" means that tuning THIS function affects the performance / tuning of the other one to a high degree,
+  and "Highly affected by" the reverse, always with the underlying physics and focused on the tunable (WTGType)
+  parameters; signal links are not the criterion. The signal graphs are fine and stay; the tuning guides show only
+  tuning couplings; complementary tuning graphs are welcome.
+  - Done: one coupling graph (`tools/tuning_sheets/coupling.py` in the project, 113 edges, each with one reason written
+    once and shown on both sheets), cited parameter names checked against the model / CoPaD. Example: the Pitch Reference
+    Limiter (rate limit, deadband) affects the Speed-Pitch PI and IPC, not the reverse.
 - **03-Nov-2026, v1.1.0. The user's request:** add the Overview table of each tuning task (as in the Jira OVTASKs and the
   Word document `Tuning_Task_Sheets_SG5.2-170-HCF.docx` of the SG5.2-170-HCF project), shown when clicking the box of a
   function, without the tuning gates; add the simulation path(s) as the only new input, with the same DLC detail and

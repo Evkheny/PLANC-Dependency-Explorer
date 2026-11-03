@@ -1,6 +1,6 @@
 {
- "version": "2026-11-03",
- "note": "Tuning task overview knowledge base (Jira OVTASK overview rows, gates omitted). Curated by Turbine Control from the PLANC model, the Controller Description and CoPaD; text marked [P] is proposed and must be reviewed.",
+ "version": "2026-11-03b",
+ "note": "Tuning task overview knowledge base (Jira OVTASK overview rows, gates omitted). Curated by Turbine Control from the PLANC model, the Controller Description and CoPaD; text marked [P] is proposed and must be reviewed. Highly affected functionalities / by = tuning couplings (A -> B: changing the tunable parameters of A requires re-tuning or re-checking B), with the physical reason; not signal links.",
  "tasks": [
   {
    "key": "OVTASK-120",
@@ -25,13 +25,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Rotor Speed Filter:** ESFE_Freq1ES-3ES set the centre frequencies of the edgewise tracking and peak-notch filters (main use).",
-    "- **External Speed Offset Interface:** ESFE_Freq1ES sets the frequency of its torsional band-stop filter.",
-    "Through the Rotor Speed Filter, every function that uses the filtered speed (speed controllers, RSA, converter torque reference) depends on a correct estimate."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Rotor Speed Filter (OVTASK-121):** the 1ES-3ES band-stop filters are centred on the ESFE estimates: the frequency range, initial frequency and threshold of ESFE decide whether the notches sit on the actual edgewise modes. A notch off the mode leaves edgewise content in the speed feedback and adds phase lag at the wrong frequency."
    ],
    "affected_by": [
-    "- **Rotor Speed Filter:** SpdFilt_nPGnrcSpd is the analysed signal: rotor speed after the nP and generic band-stops, so that 3P / 6P content does not mask the edgewise peaks.",
-    "- Blade and rotor structural properties (physical): the initial frequencies and search ranges come from the modal analysis of the rotor."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong initial frequency or range: the estimator locks on another peak and the speed-filter notches sit at the wrong frequency: edgewise content reaches the speed loop, with edgewise vibrations, pitch and torque activity and, in the worst case, coupling with the torque control.",
@@ -63,17 +61,19 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Trajectory Offsets:** OptiPitchAngle is the base of the minimum pitch; the source flags (OptPitch__Source, OPCS_IsLimiting, SafeMode_PitLimiting) report what limits it (main use).",
-    "- **Power Boost:** the opti-pitch table at rated power is used in the boost criteria.",
-    "- **Power Estimator:** the active opti-pitch curve feeds the running power-curve calculation.",
-    "- **Inertial Response:** the opti-pitch and curtailed-speed tables estimate the available power.",
-    "- **ACS:** OptPitch_NoCmp enters its decision making."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Pitch Trajectory Offsets: Pitch Limit by Wind (PLBW) (OVTASK-138):** the pitch-limit-by-wind offsets (PLBW_Pit1 / 2) are added to the opti-pitch curve: a new curve changes the resulting minimum pitch and thrust.",
+    "- **Pitch Trajectory Tables: Opti-Pitch at Curtailed Speed (OPCS) (OVTASK-157):** the curtailed opti-pitch is derived from the same pitch tables; both must be consistent at the transition.",
+    "- **Power Estimator (OVTASK-142):** the running power curve of the estimator is computed with the opti-pitch curve.",
+    "- **Adaptive Control Strategy (ACS) (OVTASK-152):** the ACS pitch offsets (ACS_PitTbl_*) are added to the opti-pitch curve: the load reduction per offset depends on the pitch it starts from.",
+    "- **Speed-Pitch Controller: Aerodynamic Gain Scheduling (OVTASK-125):** the pitch at rated is the first point of the gain schedule: the aerodynamic sensitivity at the start of full load depends on it."
    ],
    "affected_by": [
-    "- **ACS** and **Controller Safe Mode:** their pitch tables are blended into the curve.",
-    "- **Air Density:** AirDensi__RatioPit scales the curve (density compensation).",
-    "- **Reduction Interface**, **Resonance Speed Avoider** and **Power Trajectory:** active speed / power references, RSA state and the speed-power curve decide when opti-pitch at curtailed speed is active and where it is read.",
-    "- Blade aerodynamics (physical): the curve comes from the power-coefficient tables of the blade."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Air Density (OVTASK-338):** the opti-pitch curve and its air-density compensation depend on the density: the optimum pitch and the thrust at a given wind speed change with it.",
+    "- **Rotor Performance Data (OVTASK-345):** the optimal pitch per tip-speed ratio is the maximum of the power coefficient of the rotor tables.",
+    "- **Flex Configuration (OVTASK-307):** the rated power sets where the opti-pitch curve ends and pitch regulation starts.",
+    "- **Power Trajectory: Speed-Power Curve (OVTASK-308):** the curve sets the tip-speed ratio at each wind speed, and the optimal pitch is defined for that tip-speed ratio: curve and opti-pitch are designed together."
    ],
    "risk": [
     "Sub-optimal curve: AEP loss. Too low pitch near rated: thrust peak, higher flap and tower loads, stall risk in turbulence. Wrong curtailed-speed curve: loads or AEP loss in curtailed operation."
@@ -103,15 +103,14 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Converter Interface:** ADTD2__Power is added to the power / torque reference (after its own limitation): the damping action itself.",
-    "- **Dynamic Power Envelope:** ADTD2_PwrMax reserves power margin for the damper.",
-    "- **Grid Fault Ride Through:** ADTD2__Speed (filtered) is used during grid faults."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Dynamic Power Envelope (OVTASK-143):** the power envelope reserves headroom for the damping power of ADTD2 (DynPwrEnv_ADTD*): the reserve is sized from the damping power the tuned ADTD2 needs.",
+    "- **Drive Train Oscillation Monitor (DTOM) (OVTASK-146):** the residual drivetrain oscillation after damping sets the normal level the oscillation monitor sees: its limits (DTOM_Str*_Lim) are set above that level.",
+    "- **Grid Fault Ride Through (GFRT) (OVTASK-301):** a grid fault excites the drivetrain mode; the damper gain during and after the fault (ADTD2_GainFactGFRT, GFRT_Post_ADTD2AccThres) and the post-fault power ramps are tuned together."
    ],
    "affected_by": [
-    "- **Speed Source Interface:** GenSdSpd_ValueLSS is the measured speed the damping is computed from (main input); GenSdSpd__Quality enables it.",
-    "- **Grid Fault Ride Through:** gain and saturation scaling, post-fault switching and the FRT speed.",
-    "- **Rotor Speed Filter:** only for the 3P notch frequency and the lead-factor scheduling.",
-    "- Drivetrain stiffness and inertia (physical): they set the torsional frequency the damper must act on."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Grid Fault Ride Through (GFRT) (OVTASK-301):** the post-fault power recovery (GFRT_Post_* power limits and ramps) decides how much the drivetrain mode is excited after a grid fault, and so how much the drivetrain damper must act."
    ],
    "risk": [
     "Too little gain or wrong phase: poorly damped torsional mode, gearbox and shaft fatigue, possible instability. Too much gain: power ripple, grid flicker, interaction with the speed-power control. Wrong 3P notch: 3P torque injected."
@@ -140,18 +139,17 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Pitch Controller:** WinAvail__SpdRotEq schedules the PI gains (loop gain over the operating range).",
-    "- **Power Estimator:** static / running power-curve lookup of the available power.",
-    "- **Thrust Estimator:** thrust lookup (used by GILL and other load functions).",
-    "- **High Wind Operator**, **Speed Limit by Power**, **Speed Limit by Wind:** derating decisions on the estimated wind.",
-    "- Power Boost (boost availability), ACS (wind inputs), Inertial Response (pitch compensation), Yaw Misalignment, Turbulence Estimator and Rotor Performance Monitor (filtered estimate and status)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller: Aerodynamic Gain Scheduling (OVTASK-125):** the estimated wind speed is a breakpoint of the gain schedule: an estimate bias moves the scheduled gain away from the actual operating point, mainly near rated where the aerodynamic sensitivity changes fastest.",
+    "- **Pitch Trajectory Offsets: Pitch Limit by Wind (PLBW) (OVTASK-138):** the pitch-limit-by-wind breakpoints (PLBW_WindSpd1 / 2) are defined on the estimated wind speed: a bias shifts the minimum pitch to other wind speeds, which changes thrust peaks and AEP.",
+    "- **Thrust Estimator (OVTASK-153):** the thrust estimate is a function of the estimated wind speed: its bias is passed on to the thrust.",
+    "- **Speed Limit by Power (SLP) (OVTASK-112):** the speed limit table (SLP_RotSpdTbl) is indexed with the estimated wind speed.",
+    "- **Rotor Performance Monitor (OVTASK-286):** the monitor compares the measured wind speed with the estimate: the normal error band (RotPerfM_WindSpdError*) depends on the accuracy of the estimator."
    ],
    "affected_by": [
-    "- **Speed-Pitch Controller:** PitchRefCollective is one of the three inputs.",
-    "- **Speed Source Interface:** RotSpd_Value and its quality.",
-    "- **Power input:** available net power (grid) or the Power Inflow Estimator; Efficiency Compensator and the tower-damper power are subtracted.",
-    "- **Air Density** (ratio) and yaw-misalignment value.",
-    "- Rotor performance tables (physical): the only WTGType parameters of the function."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Air Density (OVTASK-338):** the aerodynamic power scales with air density: the density used in the inversion of the power table sets the bias of the wind speed estimate.",
+    "- **Rotor Performance Data (OVTASK-345):** the estimator inverts the rotor power table (RotPerfData_PwrTbl): any error of the aerodynamic table becomes a bias of the estimated wind speed over the whole range."
    ],
    "risk": [
     "Biased estimate: wrong speed-pitch gain scheduling (sluggish or unstable loop), wrong high-wind derating (AEP loss or high-wind loads), wrong available-power and thrust estimates for grid services and load functions."
@@ -180,16 +178,16 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Control States**, **Speed Control Scheduler**, **Power Trajectory**, **RSA:** MinPitch and LoadRedActive are the pitch floor and the load-reduction flag the operating states, speed-controller switching, speed-power scaling and pitch gap use.",
-    "- **Tower Acceleration Limiter** and **Controller Functionality Scheduler:** LoadLimPitch_Source / LoadRedActive select gains and priorities between load handles.",
-    "- ACS, Inertial Response, External Speed Offset, Coupling Conditions, Operation (idling) and LIDAR feed-forward use MinPitch as operating-point information."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Blade Load Limiter (BLL) (OVTASK-127):** the minimum pitch at high wind reduces the thrust and the flapwise moment: BLL thresholds and gain act on the extremes left after this offset.",
+    "- **Gust Induced Load Limiter (GILL) (OVTASK-130):** the minimum pitch at high wind sets the flapwise load from which a gust starts: the gust load GILL must remove, and so its thresholds and gains, depend on this offset.",
+    "- **Power Boost (OVTASK-141):** the boost pitch offsets (PB_*_PitMinOff) are defined relative to the minimum pitch.",
+    "- **Speed Control Scheduler: Full Power State Machine (OVTASK-160):** the gap to the minimum pitch (FPSM_*_PitGapToMinPit) that decides the full-power state is measured from this minimum pitch."
    ],
    "affected_by": [
-    "- **Pitch Trajectory Tables:** OptiPitchAngle is the base (main input) and the source flags.",
-    "- **BLL**, **GILL** and **Pitch Tracking Monitor:** load pitch offsets combined (maximum) and shifted into the collective pitch.",
-    "- Blade edgewise / flapwise vibration monitors, Yaw Misalignment Monitor, Operation with Ice, Inertial Response: pitch offsets added to the opti-pitch.",
-    "- **Wind Speed Filter** (MaxWindSpeed) and **Air Density:** inputs of PLBW and density compensation.",
-    "- Speed-Pitch Controller (PitchRefCollective, MinPitchLimitActive) for the shift and the PLBW monitor."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Wind Speed Estimator (OVTASK-155):** the pitch-limit-by-wind breakpoints (PLBW_WindSpd1 / 2) are defined on the estimated wind speed: a bias shifts the minimum pitch to other wind speeds, which changes thrust peaks and AEP.",
+    "- **Pitch Trajectory Tables: Opti-Pitch Curve (OVTASK-140):** the pitch-limit-by-wind offsets (PLBW_Pit1 / 2) are added to the opti-pitch curve: a new curve changes the resulting minimum pitch and thrust."
    ],
    "risk": [
     "PLBW too low or too late: high flap and tower extremes with yaw error at high wind. Too high or too slow to release: unnecessary derating and AEP loss. Wrong combination of offsets: pitch steps, double counting of load offsets."
@@ -221,16 +219,17 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Controller Functionality Scheduler:** IPC_PitcOffA/B/C are summed into the individual pitch commands (main actuation); IPC_ResMomActLevel sets the IPC / PDA activation.",
-    "- **Controller Safe Mode:** IPC_Status triggers the safe-mode derating.",
-    "- Pitch Service Mode (offsets in service operation).",
-    "Physically: pitch bearings and pitch actuators (more pitch travel) and PDA, which limits the pitch movement IPC adds."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Tip to Tower Clearance Controller (TTCC) (OVTASK-128):** IPC reduces the 1P flapwise and tilt loads and changes the blade deflection at the tower passage: the TTCC load thresholds and pitch offset are set with IPC active.",
+    "- **Pitch Damage Attenuator (PDA) (OVTASK-136):** IPC is the largest source of pitch travel and bearing damage: the PDA activation and attenuation are tuned for the IPC amplitude.",
+    "- **Controller Safe Mode (OVTASK-129):** the safe-mode derating when IPC is unavailable (SafeMode_IPC_*) must compensate the load reduction the tuned IPC gives.",
+    "- **Controller Functionality Scheduler (OVTASK-135):** the IPC pitch amplitudes allowed per state (FuncSche_IPCAllowedPitAmp*) are set from the amplitude the tuned IPC needs."
    ],
    "affected_by": [
-    "- **Moment Transformations:** tilt and yaw moments and their status (main inputs).",
-    "- **Rotor Azimuth Estimator:** azimuth for the inverse Coleman transform (phase of the cyclic pitch).",
-    "- **Controller Functionality Scheduler**, **Pitch System Amplitude Limit Estimator**, IPC-assisted yawing: allowed amplitudes and residual limits.",
-    "- Speed-Pitch Controller (collective pitch for the amplitude limits), Pitch Control States (activation ramp), Rotor Speed Filter (3P frequency only)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Rotor Azimuth Estimator and Monitor (OVTASK-334):** IPC transforms the blade moments to tilt / yaw and back with the rotor azimuth: an azimuth offset or delay rotates the tilt / yaw axes, so the IPC gain and phase are only valid for a correct azimuth.",
+    "- **Pitch Servo Controller (PSC) (OVTASK-132):** IPC commands 1P / 2P cyclic pitch: the actuator must follow at those frequencies, and its phase lag there sets the phase compensation and gain of IPC.",
+    "- **Pitch Reference Limiter (OVTASK-296):** the same rate limit applies to collective plus cyclic pitch: it bounds the IPC amplitude that can be added at high collective activity."
    ],
    "risk": [
     "Too little IPC: higher blade flap and yaw / tilt fatigue. Too much: pitch bearing damage and actuator wear above design, interaction with PDA and TTCC. Wrong azimuth phase: IPC adds load instead of removing it."
@@ -261,16 +260,15 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Controller Functionality Scheduler:** TTCC__PitcOffA/B/C are summed into the individual pitch commands (main actuation); azimuth activation flags drive the TTCC / PDA priority.",
-    "- **Controller Safe Mode:** TTCC__Status triggers the safe-mode derating.",
-    "- Pitch Service Mode.",
-    "Physically: pitch bearing damage and AEP."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Pitch Damage Attenuator (PDA) (OVTASK-136):** TTCC pitch offsets add pitch travel per revolution in the tower passage: PDA must account for them.",
+    "- **Controller Functionality Scheduler (OVTASK-135):** the maximum TTCC offset (TTCC_PitOffsetMax) in the scheduler bounds the TTCC action."
    ],
    "affected_by": [
-    "- **Moment Transformations:** out-of-plane and tilt moments (load level, main input) and their status.",
-    "- **Rotor Azimuth Estimator:** azimuth window in front of the tower (timing of the pitch-out).",
-    "- **Rotor Speed Filter:** only for the azimuth-shift estimate and the 3P / 9P filter frequencies.",
-    "- Controller Functionality Scheduler (allowed amplitude); BLL and IPC (shared pitch action)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Rotor Azimuth Estimator and Monitor (OVTASK-334):** the tower-passage window (TTCC_ActivationLvl_AziStart / AziEnd) is defined in azimuth: azimuth errors move the window away from the real tower passage.",
+    "- **Pitch Servo Controller (PSC) (OVTASK-132):** TTCC compensates the time the actuator needs to pitch out before the tower passage (TTCC_DelayPit): a slower or faster actuator changes that delay.",
+    "- **Individual Pitch Control (IPC) (OVTASK-133):** IPC reduces the 1P flapwise and tilt loads and changes the blade deflection at the tower passage: the TTCC load thresholds and pitch offset are set with IPC active."
    ],
    "risk": [
     "Too late or too weak: blade-tower strike risk, clearance below the design limit (already flagged as critical by Loads). Too early or too strong: AEP loss, pitch activity and bearing damage. Wrong azimuth timing: pitch-out on the wrong blade."
@@ -301,15 +299,14 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Controller Functionality Scheduler:** PDA_ActLevel coordinates IPC / PDA activation; the PDA offsets reach the individual pitch commands through it.",
-    "- **Controller Safe Mode:** PDA_Status triggers the safe-mode derating.",
-    "Physically: IPC and TTCC effectiveness (their pitch movement is limited) and the speed loop (collective pitch rate)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Controller Functionality Scheduler (OVTASK-135):** the PDA activation level in operation (FuncSche_PDAActivationLevelOperat) and its priority against BLL / GILL depend on how much pitch travel PDA removes."
    ],
    "affected_by": [
-    "- **Moment Transformations:** pitch bearing moments of each blade and their status (main input).",
-    "- **Speed-Pitch Controller:** PitchRefCollective sets the pitch-rate activation and the offset calculation.",
-    "- **Overspeed Monitor:** OvSpdMon__Lim1 sets the rotor-speed activation level.",
-    "- Controller Functionality Scheduler (activation and pitch commands), Pitch Control States (activation ramp, maximum pitch ramp), Rotor Speed Filter (activation level only)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the collective pitch activity of the speed loop is the main source of pitch bearing damage at high wind: the PDA activation thresholds (pitch speed, bearing moment) depend on it.",
+    "- **Individual Pitch Control (IPC) (OVTASK-133):** IPC is the largest source of pitch travel and bearing damage: the PDA activation and attenuation are tuned for the IPC amplitude.",
+    "- **Tip to Tower Clearance Controller (TTCC) (OVTASK-128):** TTCC pitch offsets add pitch travel per revolution in the tower passage: PDA must account for them."
    ],
    "risk": [
     "Too little action: pitch bearing damage above design (raised by IPC). Too much: blade and hub loads increase and the speed control loses pitch authority (overspeed risk)."
@@ -340,15 +337,13 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Reduction Interface:** HWO_PwrRed / HWO_SpdRed enter the minimum selection of the active power and speed references (main use).",
-    "- **ACS:** the HWO reductions are combined with the other reduction sources.",
-    "Through the active references: Speed-Pitch and Speed-Power controllers, Power Trajectory and all functions working on ActRef.Speed / ActRef.Power."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller: Aerodynamic Gain Scheduling (OVTASK-125):** the high-wind curtailment adds operating points (reduced speed and power at high pitch) that the gain schedule must cover with margin.",
+    "- **Wind Speed Monitor (OVTASK-290):** the wind limits for stop and restart (WL_High_*) must be consistent with the HWO cut-out window (HWO_*Cutout*, WindSpdCurtWinWidth): otherwise the turbine stops before or after HWO has curtailed.",
+    "- **Controller Overspeed Monitor (OVTASK-123):** the curtailed speed references at high wind change the reference against which the relative overspeed limits are set."
    ],
    "affected_by": [
-    "- **Wind Speed Estimator:** WinAvail__SpdFree (filtered) is the wind speed the curtailment is scheduled on (main input).",
-    "- **Wind Speed Monitor:** the active wind limit (WindLim__ActWL6) shifts the trajectories.",
-    "- **Power Boost** and **Flex Configuration:** rated power (with boost) the reduction is computed from.",
-    "- HWO / HWRT type selection and enable flags (HWOType selects the trajectory)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Curtailment too late or too weak: high loads at very high wind or more cut-outs. Too early or too strong: AEP loss. Wrong wind-speed filtering: oscillating references (pitch and power activity) near the thresholds."
@@ -377,15 +372,13 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Grid Fault Ride Through** and **Power Limit by Power Available:** PwrAvail__PwrRotAR (filtered) is their available power.",
-    "- **Low Power Detector:** power-curve points (PwrCrv_*) are the reference for detecting under-performance and ice.",
-    "- High Performance Park Pilot (available power to the park controller)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Low Power Detector (OVTASK-278):** the low-power detection compares the produced power with a percentage of the expected power: the margin (LPDC_*PercentOfPwrCrv) must cover the error of the expected power."
    ],
    "affected_by": [
-    "- **Wind Speed Estimator:** estimated wind speeds (rotor-equivalent and equivalent) index the power curves (main input).",
-    "- **Pitch Trajectory Tables** and **Power Trajectory:** opti-pitch and speed-power curves define the running power curve.",
-    "- **Flex Configuration** (rated power) and Reduction Interface (non-park power limit).",
-    "- Rotor performance tables (physical): the only WTGType parameters of the function."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Rotor Performance Data (OVTASK-345):** the available power is computed from the rotor power table: table errors appear directly in the estimate.",
+    "- **Pitch Trajectory Tables: Opti-Pitch Curve (OVTASK-140):** the running power curve of the estimator is computed with the opti-pitch curve."
    ],
    "risk": [
     "Biased available power: wrong possible-power reporting to the park / grid operator, wrong power reserve in grid functions, false low-power or ice detections."
@@ -414,16 +407,16 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Reduction Interface:** boosted rated power / speed and boost limits enter the active references (main use).",
-    "- **Speed-Power Controller:** ActBoost_PwRated sets its power limits.",
-    "- **High Wind Operator**, Frequency Controller, HTRT, Power Limit by Grid Voltage, Thermal Mode Enforcer, park pilot: their reductions are computed relative to the boosted rated power.",
-    "- ACS (BoostAllowed) and Yaw Offset Interface (IsPowerBoosting)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Adaptive Control Strategy (ACS) (OVTASK-152):** boost raises power and loads: ACS must curtail correctly in boosted operation.",
+    "- **Dynamic Power Envelope (OVTASK-143):** the boosted power level must fit inside the power envelope and its headroom.",
+    "- **Speed Control Scheduler: Full Power State Machine (OVTASK-160):** the full-power state uses gaps to minimum pitch per boost type (FPSM_BoostTyp*_PitGapToMinPit): they are set for the boost pitch offsets."
    ],
    "affected_by": [
-    "- **Dynamic Power Envelope** and converter power limit: available boost (main limit).",
-    "- **Speed-Pitch Controller** (PitchRefCollective) and **Pitch Trajectory Tables** (opti-pitch at rated power): pitch criterion for speed boost.",
-    "- **Wind Speed Estimator** and **Turbulence Estimator:** turbulence criterion and available boost.",
-    "- ACS, Controller Safe Mode, HTRT, Reduction Interface, RSA window configuration, ambient temperature, power factor: enabling criteria."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Rotor Performance Data (OVTASK-345):** the boost criteria use the rotor power table to judge the margin to rated power and loads.",
+    "- **Flex Configuration (OVTASK-307):** boost levels and conditions are defined relative to the rated power and speed.",
+    "- **Pitch Trajectory Offsets: Pitch Limit by Wind (PLBW) (OVTASK-138):** the boost pitch offsets (PB_*_PitMinOff) are defined relative to the minimum pitch."
    ],
    "risk": [
     "Boost too aggressive or criteria too loose: loads and component temperatures above design. Too conservative: AEP loss. Wrong ramps: power / speed steps."
@@ -451,15 +444,13 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **ACS:** normalised thrust, its statistics and status feed the load estimators (main use).",
-    "- **GILL:** ThrustEs__ThrustNo schedules the gains of the rotor-acceleration type (disabled in the current configuration).",
-    "- LIDAR processing (induction factor)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Gust Induced Load Limiter (GILL) (OVTASK-130):** GILL is gain-scheduled with the normalised thrust estimate: its gains are only valid if the thrust estimate is correct at the gust conditions."
    ],
    "affected_by": [
-    "- **Wind Speed Estimator:** WinAvail__SpdRot indexes the thrust table (main input).",
-    "- **Speed-Pitch Controller** (PitchRefCollective) and **Speed Source Interface** (rotor speed).",
-    "- **Air Density:** density correction.",
-    "- Rotor thrust tables and nominal thrust (physical): the WTGType parameters."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Rotor Performance Data (OVTASK-345):** the thrust estimate is read from the rotor thrust table (RotPerfData_ThrustTbl, ThrustNom).",
+    "- **Wind Speed Estimator (OVTASK-155):** the thrust estimate is a function of the estimated wind speed: its bias is passed on to the thrust."
    ],
    "risk": [
     "Biased thrust: ACS load estimates wrong (unneeded curtailment or loads above design in curtailed operation)."
@@ -488,13 +479,15 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Control States:** TwrAccLi__PitRtGn scales the maximum pitch ramp in the operating states (main actuation).",
-    "Physically: the stop dynamics (pitch rate, stopping time, overspeed margin) and the tower fore-aft loads; it shares the tower response with GILL."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Controller Overspeed Monitor (OVTASK-123):** TAL slows the pitch-out when the tower accelerates, also in stops: slower pitch-out gives higher speed peaks, which the overspeed limits must accept.",
+    "- **Tower Vibration Monitor (OVTASK-310):** TAL limits the tower acceleration: the vibration-monitor limits must sit above the TAL activation levels so that TAL acts before the monitor stops the turbine.",
+    "- **Adaptive Control Strategy (ACS) (OVTASK-152):** TAL and ACS both react to tower acceleration: the ACS escalation levels are set above the TAL action."
    ],
    "affected_by": [
-    "- **Nacelle Acceleration Filter:** fore-aft acceleration (main input) and the Nacelle Acceleration Sensor Validation status.",
-    "- **Tower Frequency Estimator:** tower frequency for the band-pass filter parameters.",
-    "- **Speed-Pitch Controller** (PitchRefCollective activation level), Operation / pitch states (operating-state activation), Pitch Trajectory Offsets (load-reduction source selects the gain)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Pitch Control States: General Pitch Rate Limits (OVTASK-131):** TAL reduces the positive pitch-rate limit (SpdPit_MaxPitRefRatePosLoadRed): its effect is relative to the general limit.",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the tower fore-aft motion that TAL reacts to is driven by the thrust changes the speed loop makes: a faster loop excites or damps the tower 1st fore-aft mode differently, so the TAL activation levels must be re-set."
    ],
    "risk": [
     "Too little action: high tower fore-aft extremes in stops. Too much: pitch-out too slow in stops, overspeed and longer stopping, higher blade loads during the stop."
@@ -525,11 +518,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Safety-system stops (no controller signal link): availability, the loads of the safety stop and the overspeed design envelope."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- **Controller Overspeed Monitor** and **Speed-Pitch Controller** (physical): they set the speed the safety thresholds must stay above.",
-    "- Speed measurements of the safety system and the design overspeed of the turbine."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Controller Overspeed Monitor (OVTASK-123):** the safety-system overspeed limits must sit above the controller limits, with margin, so that the controller protection acts first."
    ],
    "risk": [
     "Too low: safety trips in normal or extreme operation (hard stops, high loads, availability loss). Too high: no independent protection before the design overspeed; certification non-compliance."
@@ -560,15 +553,16 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Power Controller:** active envelope and reduced-converter mode set its power limits (main use).",
-    "- **Converter Interface:** electrical limits, peak envelope and damper power limits saturate the power / torque reference.",
-    "- **Active Tower Damper Side-Side:** DynPwrEnv_ATDPwrLim limits its power.",
-    "- Reduction Interface, Power Boost (available boost), Speed Limit by Power, RSA and RSA window configuration, ACS, Grid Forming Operator, self-sustained turbine: they read the envelope as the power-speed boundary."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Power Controller (PI) (OVTASK-159):** the power envelope bounds the power reference the speed-power loop can command: power headroom and rates change the loop behaviour at the limits.",
+    "- **Adaptive Control Strategy (ACS) (OVTASK-152):** the power envelope limits the power ACS starts from when it curtails: the load reduction per curtailment level depends on it."
    ],
    "affected_by": [
-    "- Electrical capability of generator and converter (physical): the envelope tables are the WTGType / GenType parameters.",
-    "- **ADTD2** (ADTD2_PwrMax) and **Active Tower Damper** (PwTwrDamp) margins; **GFRT** scaling.",
-    "- **Rotor Speed Filter:** speed for the envelope interpolation."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Active Drive Train Damper 2 (ADTD2) (OVTASK-292):** the power envelope reserves headroom for the damping power of ADTD2 (DynPwrEnv_ADTD*): the reserve is sized from the damping power the tuned ADTD2 needs.",
+    "- **Active Tower Damper Side-Side (ATD) (OVTASK-148):** the power envelope reserves headroom for the damping power of the side-side tower damper (ATD_X_MaxPwr and the ATD power estimate in the envelope): the reserve is sized from the power the tuned damper needs.",
+    "- **Active Drive Train Damper (ADTD, legacy) (OVTASK-145):** when the legacy damper is the active one, its power saturation (ADTD_PwrSat) is the damping power the envelope must reserve.",
+    "- **Power Boost (OVTASK-141):** the boosted power level must fit inside the power envelope and its headroom."
    ],
    "risk": [
     "Envelope above the hardware capability: converter / generator overload and trips. Too conservative: AEP loss and less margin for the speed control (overspeed risk) and dampers."
@@ -599,15 +593,15 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Reduction Interface:** ACS__Power / ACS__Speed reduce the active references (main actuation).",
-    "- **Pitch Trajectory Tables / Offsets:** ACS__PitchTbl offsets the minimum pitch.",
-    "- **Power Boost:** ACS__BoostDis disables boost.",
-    "- Inertial Response (pitch table for the available-power estimate)."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- **Thrust Estimator**, **Moment Transformations** (tilt / yaw moments), **Nacelle Acceleration Filter** and validation, **Wind Speed / Turbulence Estimators**, **Tower Frequency Estimator** (frequency compensation): inputs of the load estimators (main inputs).",
-    "- Speed-Pitch Controller (PitchRefCollective) and Speed Source Interface (rotor speed) statistics.",
-    "- Dynamic Power Envelope, Flex Configuration, HWO, Safe Mode, Power Boost, RSA windows: limits and other reduction sources it is combined with."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Pitch Trajectory Tables: Opti-Pitch Curve (OVTASK-140):** the ACS pitch offsets (ACS_PitTbl_*) are added to the opti-pitch curve: the load reduction per offset depends on the pitch it starts from.",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the tower and blade load levels ACS reacts to are set by the speed-loop response: the escalation thresholds must be set on the final loop.",
+    "- **Tower Acceleration Limiter (TAL) (OVTASK-139):** TAL and ACS both react to tower acceleration: the ACS escalation levels are set above the TAL action.",
+    "- **Power Boost (OVTASK-141):** boost raises power and loads: ACS must curtail correctly in boosted operation.",
+    "- **Dynamic Power Envelope (OVTASK-143):** the power envelope limits the power ACS starts from when it curtails: the load reduction per curtailment level depends on it."
    ],
    "risk": [
     "Estimators not matched to the rotor: ACS curtails when not needed (AEP loss) or does not act when loads exceed the design (site suitability not ensured). Thresholds wrong: frequent activation, oscillating references."
@@ -638,11 +632,13 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "The pitch hardware (cylinder, valves) and, through the actual pitch angle, every pitch-based control loop: Speed-Pitch Controller, IPC, PDA, TTCC, BLL, GILL, TAL (physical coupling inside their loops, no signal link to them)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the pitch actuator is inside the speed loop: its bandwidth, deadband and gain schedule (PSC_Kp, Ki, KpDeadband, filters) add phase lag at the speed-loop crossover and limit the PI gains that keep a stability margin.",
+    "- **Individual Pitch Control (IPC) (OVTASK-133):** IPC commands 1P / 2P cyclic pitch: the actuator must follow at those frequencies, and its phase lag there sets the phase compensation and gain of IPC.",
+    "- **Tip to Tower Clearance Controller (TTCC) (OVTASK-128):** TTCC compensates the time the actuator needs to pitch out before the tower passage (TTCC_DelayPit): a slower or faster actuator changes that delay."
    ],
    "affected_by": [
-    "- Pitch references after the Pitch Reference Limiter (collective + individual offsets).",
-    "- Hydraulic pitch system and blade inertia / pitch bearing friction (physical): plant of the position loop."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Too slow or too much phase lag: reduced stability margin of the speed loop, less effective load handles, overspeed peaks. Too aggressive: valve and actuator wear, oscillations, excitation of blade modes."
@@ -673,16 +669,19 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Converter Interface:** power reference and ramp limits (main actuation: generator torque).",
-    "- **Power Control States** and **Speed Control Scheduler:** regulated power, envelope maximum and speed error drive the power states and the speed-controller switching.",
-    "- **Grid Fault Ride Through** and **Inertial Response:** pre-fault power limits and local power reference.",
-    "- Efficiency Compensator, Power Limit by Power Available, LIDAR feed-forward."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the speed-power loop bandwidth at rated sets the speed excursions the speed-pitch loop meets at the transition from partial to full load.",
+    "- **Speed-Power Controller: Gain Scheduling (OVTASK-161):** the gain schedule is relative to the speed-power PI gains: changing Kp changes the gain at every scheduled speed.",
+    "- **Resonance Speed Avoider (RSA) (OVTASK-162):** in partial load the speed-power loop crosses the RSA window: its bandwidth and power rate limits set the crossing time and the power drop RSA_MinPwrReq must allow."
    ],
    "affected_by": [
-    "- **Rotor Speed Filter:** RotSpdFi_Spd is the PI feedback and scheduling input; RotSpdFi_SpdLead selects the envelope point.",
-    "- **Dynamic Power Envelope**, **Reduction Interface**, **Power Boost**, Flex Configuration, Power Limit by Grid Voltage: power limits and active references.",
-    "- **Resonance Speed Avoider:** speed reference and power limits around the resonance windows.",
-    "- **Grid Fault Ride Through** / **Inertial Response:** override of the power reference during grid events; Speed Control Scheduler (operation mode, reset)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Power Trajectory: Speed-Power Curve (OVTASK-308):** the speed-power curve is the trajectory the speed-power loop follows in partial load: its slope sets the loop gain needed and the torque the drivetrain sees.",
+    "- **Rotor Speed Filter (OVTASK-121):** the phase lag of the speed filters at the crossover of the speed-power PI in partial load limits the gain that keeps a stability margin: changing the filters requires re-checking the PI gains.",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** near rated both loops are active around the transition: their bandwidths and the speed shift between their references decide whether they hand over smoothly or fight each other.",
+    "- **Speed Control Scheduler: Speed Shifter (OVTASK-163):** the speed shift between the pitch and power speed references (SpdShift_*) decides at which speed torque stops increasing and pitch takes over: it changes the speed-power loop behaviour near rated.",
+    "- **Speed-Power Controller: Gain Scheduling (OVTASK-161):** the gain schedule sets the effective loop gain of the speed-power PI over the partial-load speed range: changing it changes the loop margins at every speed.",
+    "- **Dynamic Power Envelope (OVTASK-143):** the power envelope bounds the power reference the speed-power loop can command: power headroom and rates change the loop behaviour at the limits."
    ],
    "risk": [
     "Too soft: speed deviations from the optimal tip-speed ratio (AEP loss), slow RSA window crossing. Too aggressive: torque fluctuations, drivetrain fatigue, grid flicker, interaction with ADTD2."
@@ -710,11 +709,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Same consumers as the Speed-Power PI (OVTASK-159): Converter Interface, Power Control States, Speed Control Scheduler (SpdPwr_VariableGain), GFRT, Inertial Response."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Power Controller (PI) (OVTASK-159):** the gain schedule sets the effective loop gain of the speed-power PI over the partial-load speed range: changing it changes the loop margins at every speed."
    ],
    "affected_by": [
-    "- **Rotor Speed Filter:** RotSpdFi_Spd is the scheduling variable.",
-    "- Rotor aerodynamics and inertia (physical): define the gain the schedule must compensate."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Speed-Power Controller (PI) (OVTASK-159):** the gain schedule is relative to the speed-power PI gains: changing Kp changes the gain at every scheduled speed."
    ],
    "risk": [
     "Schedule not matched to the rotor: too high gain at some operating points (torque oscillations, drivetrain fatigue) or too low (poor tracking, AEP loss)."
@@ -745,15 +745,13 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Power Controller:** RSA_SpdPwrRef, RSA_PwrMax / Min and RSA_State shape its reference and limits.",
-    "- **Speed-Pitch Controller:** RSA_SpdPitchRef and RSA_SpdPitchCtrlGain move its reference and scale its gains.",
-    "- Pitch Trajectory Tables (opti-pitch at curtailed speed) and other users of RSA_State."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- **Resonance Speed Window Configuration:** window definitions (main input).",
-    "- **Rotor Speed Filter:** filtered speed and lead speed for the state machine.",
-    "- Reduction Interface (active references), Dynamic Power Envelope, Power Trajectory (speed-power curve), Pitch Trajectory Offsets (pitch gap), Active Idle.",
-    "- Tower frequencies (physical): define where the windows must be."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Power Trajectory: Speed-Power Curve (OVTASK-308):** the speed window avoided by RSA lies on the curve: the power levels at the window edges, and so the time to cross the window, depend on the curve.",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** RSA moves the speed-pitch reference and loop gain to cross the resonance window; its activation and mode-switch times (RSA_SpdPitCtrlActivationTime, RSA_TimePitModeSwitch) assume the speed-loop response, so they must be re-checked when the loop changes.",
+    "- **Speed-Power Controller (PI) (OVTASK-159):** in partial load the speed-power loop crosses the RSA window: its bandwidth and power rate limits set the crossing time and the power drop RSA_MinPwrReq must allow."
    ],
    "risk": [
     "Window missing or misplaced: operation at tower resonance, high tower fatigue and vibrations. Too wide or too slow crossings: AEP loss and speed / power transients."
@@ -783,16 +781,15 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Pitch Controller:** FRTPCtrl__SpdPiGn scales the PI gains; GFRT_State / TimeActPhase drive the grid-fault pitch feed-forward.",
-    "- **Speed-Power Controller:** GFRT power reference, limits and ramps replace the normal ones during and after the fault.",
-    "- **ADTD2** and **Active Tower Damper Side-Side:** gain / saturation scaling and post-fault switching.",
-    "Physically: speed peaks seen by the overspeed monitors and the safety system."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the speed-pitch gain scaling during and after a grid fault (GFRT_Post_*SpdPit*) changes the effective loop gain the PI was tuned for, and so the speed recovery after the fault.",
+    "- **Speed-Pitch Controller: Feed-Forward (OVTASK-113):** the grid-fault feed-forward is triggered and timed by the ride-through states (GFRT_*): the feed-forward gains are set for that timing.",
+    "- **Active Drive Train Damper 2 (ADTD2) (OVTASK-292):** the post-fault power recovery (GFRT_Post_* power limits and ramps) decides how much the drivetrain mode is excited after a grid fault, and so how much the drivetrain damper must act."
    ],
    "affected_by": [
-    "- Converter fault detection (grid dip mode) and the Speed Source Interface (generator speed LSS).",
-    "- **Speed-Power Controller** (pre-fault power and limits), **Power Control States** (regulated power), **Power Estimator** (available power) and Reduction Interface (park curtailment, cut-in speed).",
-    "- **Rotor Speed Filter** (state machine, speed-pitch gain scaling) and **ADTD2** (filtered damper speed).",
-    "- Grid-code requirements (WGPFType selects the post-fault behaviour)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** after a grid fault the speed loop must stop the acceleration: the post-fault gain reduction and its time window (GFRT_Post_*SpdPit*) scale the tuned PI gains.",
+    "- **Active Drive Train Damper 2 (ADTD2) (OVTASK-292):** a grid fault excites the drivetrain mode; the damper gain during and after the fault (ADTD2_GainFactGFRT, GFRT_Post_ADTD2AccThres) and the post-fault power ramps are tuned together."
    ],
    "risk": [
     "Poor fault handling: overspeed alarms or safety trips after grid dips, high drivetrain and tower loads, slow or oscillating power recovery (grid-code non-compliance).",
@@ -823,12 +820,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Turbine stops on tower vibration (availability) and the protection of the tower (no signal link to other control functions)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- **Nacelle Acceleration Filter** (fore-aft and side-side raw accelerations) and **Nacelle Acceleration Sensor Validation** (status).",
-    "- Speed-Pitch, Speed Source, Wind Speed Filter, Yaw Error Controller, Operation: event data only.",
-    "- Tower frequencies and damping (physical): define the vibration levels in operation."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the normal tower fore-aft acceleration level comes from the speed-loop response: the vibration limits must stay above it with margin.",
+    "- **Tower Acceleration Limiter (TAL) (OVTASK-139):** TAL limits the tower acceleration: the vibration-monitor limits must sit above the TAL activation levels so that TAL acts before the monitor stops the turbine."
    ],
    "risk": [
     "Limits too low: nuisance stops and availability loss. Too high: the tower can reach critical loads without protection."
@@ -857,13 +854,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Trajectory Offsets:** OffPitch__OperWIce adds a pitch offset to the minimum pitch (main action in iced operation).",
-    "- **Low Power Detector**, Low Torque Detector, Rotor Performance Monitor: ice / de-icing status and external ice sensor data adapt their detection.",
-    "- **Active Idle:** idling start-up reference with ice."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Low Power Detector (OVTASK-278):** operation with ice lowers the power curve on purpose (de-icing / anti-icing modes): the low-power thresholds per mode (LPDC_OWI_*, LPDC_AntiIce_*) are set for that power loss.",
+    "- **Rotor Performance Monitor (OVTASK-286):** operation with ice lowers the power curve on purpose (de-icing / anti-icing modes): the wind speed error accepted per ice mode (RotPerfM_WindSpdError*Ice*) follows the performance loss of the iced rotor in each mode."
    ],
    "affected_by": [
-    "- Ice detection (Ice Detector, Low Power Detector, external ice sensor) and the OpWIceTy / de-icing type selections.",
-    "- Wind speed (maximum wind for adaptive operation)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong pitch offset or limits: loads above design with iced blades or unnecessary production loss. Wrong mode handling: running when a stop is required for safety."
@@ -891,9 +887,15 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Every function scaled with the design or rated power: Speed-Power Controller, Converter Interface, ACS, HWO, Power Boost, GFRT, Inertial Response, HTRT, Active Tower Damper, Low Power Detector, Controller Functionality Scheduler (GILL power-reference change) and others."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Power Trajectory: Speed-Power Curve (OVTASK-308):** the rated power (PwrDesign) is the end point of the speed-power curve.",
+    "- **Pitch Trajectory Tables: Opti-Pitch Curve (OVTASK-140):** the rated power sets where the opti-pitch curve ends and pitch regulation starts.",
+    "- **Speed-Pitch Controller: Aerodynamic Gain Scheduling (OVTASK-125):** the rated point (power and speed) is where the speed-pitch loop starts; the gain schedule is built from there to cut-out.",
+    "- **Power Boost (OVTASK-141):** boost levels and conditions are defined relative to the rated power and speed."
    ],
-   "affected_by": [],
+   "affected_by": [
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
+   ],
    "risk": [
     "Wrong design or rated power: every normalised function is off-scale (limits, gains, detections) and the turbine operates outside its certified rating."
    ],
@@ -921,14 +923,13 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Pitch Controller:** pitch states, minimum / maximum pitch and pitch-ramp limits (PitSpec_*, PitCtrl_*) define the envelope of the collective pitch command.",
-    "- **IPC** and **PDA:** state activation ramps; PDA uses the maximum pitch ramp.",
-    "Physically: stopping dynamics and the pitch-system duty."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the general pitch-rate limits (SpdPit_MaxPitRefRatePos / Neg) bound the pitch rate of the speed loop: when they are reached the loop saturates and speed peaks grow.",
+    "- **Tower Acceleration Limiter (TAL) (OVTASK-139):** TAL reduces the positive pitch-rate limit (SpdPit_MaxPitRefRatePosLoadRed): its effect is relative to the general limit.",
+    "- **Controller Overspeed Monitor (OVTASK-123):** the pitch rates in stops and at high speed error set how fast the rotor is braked aerodynamically, and so the overspeed peaks the limits must accept."
    ],
    "affected_by": [
-    "- **Speed-Pitch Controller:** PitchRefCollective (stop-zone rate limit) and SpdPit_RotSpdErrDsgn (minimum pitch rate).",
-    "- **Tower Acceleration Limiter:** pitch-rate gain; **Pitch Trajectory Offsets:** minimum pitch and load-reduction flag.",
-    "- Active Idle, Reduction Interface (cut-in speed), RSA (speed reference at cut-in), Torque Mismatch Detector."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Limits too high: pitch-system overload and high tower / blade loads in stops. Too low: speed control saturated, overspeed in gusts and faults, slow stops."
@@ -956,12 +957,17 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Same consumers as the Speed-Pitch Controller (PitchRefCollective): pitch reference limiter, pitch offsets, IPC, load handles and estimators."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the PI is tuned at a reference operating point and the schedule extends it to the full-load range: a change of the schedule changes the loop gain and margins in the rest of the range, and the reverse."
    ],
    "affected_by": [
-    "- **Wind Speed Estimator:** WinAvail__SpdRotEq (scheduling input).",
-    "- **Rotor Speed Filter:** RotSpdFi_SpdLead (low-pass filtered, scheduling input).",
-    "- Rotor aerodynamics (physical): the schedule comes from the linearised aerodynamic sensitivity."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Rotor Performance Data (OVTASK-345):** the aerodynamic sensitivity dP/dpitch that the gain schedule compensates comes from the same rotor aerodynamics: a new rotor or new tables require a new schedule.",
+    "- **Wind Speed Estimator (OVTASK-155):** the estimated wind speed is a breakpoint of the gain schedule: an estimate bias moves the scheduled gain away from the actual operating point, mainly near rated where the aerodynamic sensitivity changes fastest.",
+    "- **Flex Configuration (OVTASK-307):** the rated point (power and speed) is where the speed-pitch loop starts; the gain schedule is built from there to cut-out.",
+    "- **Pitch Trajectory Tables: Opti-Pitch Curve (OVTASK-140):** the pitch at rated is the first point of the gain schedule: the aerodynamic sensitivity at the start of full load depends on it.",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the schedule is relative to the reference gains Kp / Ti: changing them changes the gain at every scheduled point.",
+    "- **High Wind Operator (HWO) (OVTASK-154):** the high-wind curtailment adds operating points (reduced speed and power at high pitch) that the gain schedule must cover with margin."
    ],
    "risk": [
     "Schedule not matched to the rotor: unstable or oscillating speed loop at some wind speeds, or sluggish response (overspeed peaks)."
@@ -991,10 +997,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Speed-Pitch Controller output (PitchRefCollective) near the speed limits; overspeed margins of the monitors."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Controller Overspeed Monitor (OVTASK-123):** the High Speed Gain (SpdPit_HSG_*) raises the loop gain near the speed limits: it sets the peak speed the overspeed limits have to accept."
    ],
    "affected_by": [
-    "- **Rotor Speed Filter** (speed error) and the speed-pitch reference; overspeed monitor limits (physical: the region it must protect)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Speed Limit by Collective Pitch (SLCP) (OVTASK-165):** the speed limited by the collective pitch (flutter boundary) moves the speed limit near which the High Speed Gain acts."
    ],
    "risk": [
     "Too weak or too late: overspeed stops in extreme gusts. Too strong or too early: pitch chatter and higher loads in normal operation."
@@ -1024,12 +1032,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Speed-Pitch Controller output (PitchRefCollective) during power-reference changes and grid faults."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Controller Overspeed Monitor (OVTASK-123):** the pitch feed-forward on power-reference changes and grid faults (SpdPit_DeltaPwrToPitFFGain, SpdPit_GFRT_*FF) decides how much speed rise the faults cause: the overspeed limits must cover the remaining peaks."
    ],
    "affected_by": [
-    "- **Power Control States:** EffPwrRefChange (effective power-reference change).",
-    "- **Grid Fault Ride Through:** GFRT_State, GFRT_TimeActPhase; **Overspeed Monitor:** OvSpdMon__TtoLim (gain scaling).",
-    "- **Pitch Trip Avoider:** relative pitch feed-forward."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Grid Fault Ride Through (GFRT) (OVTASK-301):** the grid-fault feed-forward is triggered and timed by the ride-through states (GFRT_*): the feed-forward gains are set for that timing."
    ],
    "risk": [
     "Too little: overspeed peaks and alarms after grid faults and fast curtailments. Too much: over-pitching, power dips and speed undershoot."
@@ -1059,12 +1067,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Reduction Interface:** SLCP__SpdLim enters the minimum of the speed limits (active speed reference for the speed controllers)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller: High Speed Gain (OVTASK-124):** the speed limited by the collective pitch (flutter boundary) moves the speed limit near which the High Speed Gain acts."
    ],
    "affected_by": [
-    "- **Speed-Pitch Controller:** PitchRefCollective (filtered) is the scheduling input (main).",
-    "- RSA window configuration (compensation of the limit around the windows).",
-    "- Flutter boundary from Loads (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Missing or too high: operation close to blade flutter (aeroelastic instability, safety). Too conservative: AEP loss at high wind."
@@ -1094,10 +1101,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "All speed and power control: Speed-Power and Speed-Pitch Controllers, Pitch Trajectory Tables (curtailed speed), Power Boost, GFRT, RSA, Overspeed Monitor (adaptive limits from ActRefSpeedRSA) and others reading the active references."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Pitch Trajectory Tables: Opti-Pitch at Curtailed Speed (OPCS) (OVTASK-157):** the local power / speed limits (LocalPwrLimOEM, LocalRotSpdLimOEM) define the curtailed operating points for which the curtailed opti-pitch is designed."
    ],
    "affected_by": [
-    "Every reduction source: ACS, HWO, SLCP, SLP, Controller Safe Mode, vibration monitors, Frequency Controller, park pilot, HTRT, Active Idle, Dynamic Power Envelope, Flex Configuration."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong priority or limits: the turbine follows the wrong reduction (loads above design or unnecessary AEP loss), reference steps, minimum speed inside a resonance window."
@@ -1126,12 +1134,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Reduction Interface:** SLP_SpdLim enters the minimum of the speed limits (active speed reference of the speed controllers)."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- **Dynamic Power Envelope:** active envelope and status (inverse envelope lookup, main input).",
-    "- **Wind Speed Estimator:** equivalent wind speed (filtered) for the aerodynamic lookup.",
-    "- Reduction Interface and park pilot: power limit and park activation; Flex Configuration (rated power)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Wind Speed Estimator (OVTASK-155):** the speed limit table (SLP_RotSpdTbl) is indexed with the estimated wind speed.",
+    "- **Power Trajectory: Speed-Power Curve (OVTASK-308):** the speed limited by power is a cut of the speed-power curve."
    ],
    "risk": [
     "Speed not reduced: higher loads and overspeed risk in derated operation. Reduced too much: unstable or inefficient operation, speed / power transients at derate and release."
@@ -1161,12 +1169,13 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Reduction Interface / ACS:** safe-mode power and speed derating / degradation.",
-    "- **Pitch Trajectory Tables:** safe-mode pitch table; **Power Boost:** boost disable."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- **IPC**, **PDA**, **BLL**, **GILL**, **TTCC:** status signals (main inputs: which handle is missing).",
-    "- Moment Transformations and Rotor Azimuth Estimator (sensor status); operating conditions (cut-in / cut-out, idle, rotor speed)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Individual Pitch Control (IPC) (OVTASK-133):** the safe-mode derating when IPC is unavailable (SafeMode_IPC_*) must compensate the load reduction the tuned IPC gives.",
+    "- **Blade Load Limiter (BLL) (OVTASK-127):** the safe-mode derating when BLL / GILL are unavailable (SafeMode_BLLandGILL_*) must compensate their load reduction.",
+    "- **Gust Induced Load Limiter (GILL) (OVTASK-130):** the safe-mode derating when BLL / GILL are unavailable (SafeMode_BLLandGILL_*) must compensate the load reduction the tuned GILL gives."
    ],
    "risk": [
     "Derating too small: loads above design while a load handle is missing. Too large: availability and AEP loss on every sensor fault."
@@ -1194,12 +1203,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Trajectory Offsets:** the curtailed-speed opti-pitch becomes the base of the minimum pitch (OPCS_IsLimiting flag).",
-    "- Inertial Response (OPCS curve for the available-power estimate)."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- **Reduction Interface** (active speed / power references, maximum speed) and **RSA** (speed-power reference, state): activation and operating point.",
-    "- Power Trajectory (active speed-power curve), Air Density, Power Control States."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Pitch Trajectory Tables: Opti-Pitch Curve (OVTASK-140):** the curtailed opti-pitch is derived from the same pitch tables; both must be consistent at the transition.",
+    "- **Reduction Interface (OVTASK-156):** the local power / speed limits (LocalPwrLimOEM, LocalRotSpdLimOEM) define the curtailed operating points for which the curtailed opti-pitch is designed."
    ],
    "risk": [
     "Wrong curtailed curve: AEP loss or higher thrust / flap loads whenever the speed is curtailed."
@@ -1229,12 +1238,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- Minimum pitch during start-up (Pitch Control States, Speed-Pitch reference envelope)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Operation (state machine) (OVTASK-328):** the start pitch angle and the kick-start speeds of the operation state machine together define the aerodynamic torque and the time to reach the connection speed at start-up."
    ],
    "affected_by": [
-    "- **Rotor Speed Filter:** RotSpdFi_SpdLead (start-angle calculation).",
-    "- Coupling Conditions (cut-out speed).",
-    "- Rotor aerodynamics and inertia (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Start angle too low: high loads and possible overspeed during the run-up. Too high: slow or failed start-ups in low wind (availability)."
@@ -1262,12 +1270,13 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Pitch Controller** and **Speed-Power Controller:** speed references (SpdRefHa_PitSpeed / PwrSpeed), forced reference changes and resets.",
-    "- Pitch Trajectory Offsets (pitch gap to minimum pitch), ACS."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- **Power Control States:** regulated power; **Speed-Pitch Controller:** PitchRefCollective and its derivative; **Pitch Trajectory Offsets:** minimum pitch.",
-    "- Reduction Interface (active speed reference), external speed offsets (LIDAR, rotor sync), Power Limit by Power Available."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Pitch Trajectory Offsets: Pitch Limit by Wind (PLBW) (OVTASK-138):** the gap to the minimum pitch (FPSM_*_PitGapToMinPit) that decides the full-power state is measured from this minimum pitch.",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the pitch fluctuations around the minimum pitch near rated, set by the loop, decide whether the full-power state toggles: the gap to minimum pitch and the times (FPSM_*) are set for them.",
+    "- **Power Boost (OVTASK-141):** the full-power state uses gaps to minimum pitch per boost type (FPSM_BoostTyp*_PitGapToMinPit): they are set for the boost pitch offsets."
    ],
    "risk": [
     "Wrong thresholds: hunting between the two controllers, power dips and speed peaks around rated, higher drivetrain and tower fatigue."
@@ -1296,10 +1305,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Every state-dependent function: Pitch Control States, Power Control States (stop ramp), Wind Speed Estimator and monitors (operating state), TAL (stop activation), Power Estimator."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Power Control States (OVTASK-330):** the cut-out speed and stop conditions (CutOut_RotSpd) and the stop power ramps (CutOut_*) act in the same stop: the ramp time must suit the speed at which the stop starts."
    ],
    "affected_by": [
-    "Alarm handler (stop / idle types), converter state, coupling conditions (cut-out speed, coupling allowed), Active Idle and Kick Start."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Pitch Trajectory Offsets: Optimal Start Angle (OptiStart) (OVTASK-116):** the start pitch angle and the kick-start speeds of the operation state machine together define the aerodynamic torque and the time to reach the connection speed at start-up."
    ],
    "risk": [
     "Wrong start / stop speeds: failed start-ups, overspeed in start-up, harsh stops (loads) or stops at the wrong wind speed (AEP)."
@@ -1329,14 +1340,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Power Controller:** IR_Active, IR_PrefLocal and ramp rates override its power reference (main action).",
-    "- **Converter Interface:** electrical limits during IR.",
-    "- **Pitch Trajectory Offsets:** PitchOffsetIR; Power Control States and Rotor Sync (IR state)."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- Park pilot commands (dip size, ramp rate, inhibit) and the power reference.",
-    "- Available-power estimation inputs: rotor performance tables, opti-pitch / ACS / safe-mode tables, air density.",
-    "- Rotor inertia and generator limits (physical)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Rotor Performance Data (OVTASK-345):** the power that can be extracted during and after the inertial response is computed from the rotor power table."
    ],
    "risk": [
     "Too much energy taken: deep speed drop, stall or stop, high loads in the recovery. Too little: grid requirement not met."
@@ -1366,13 +1374,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Converter Interface / converter control:** regulated power reference and ramp-down completion (main use).",
-    "- **Speed-Pitch Controller:** EffPwrRefChange drives the pitch feed-forward; Controller Functionality Scheduler (GILL power-reference change).",
-    "- Speed Control Scheduler, GFRT, RSA, Inertial Response, ADTD2 / tower damper scheduling, Pitch Trajectory Tables, Power Boost, Reduction Interface: regulated power as operating-point information."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- **Operation:** stop-ramp state; **Speed-Power Controller:** regulated power.",
-    "- Reduction Interface (active power reference), Flex Configuration, GFRT, Inertial Response, efficiency compensation, Rotor Speed Filter (speed-dependent ramp)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Operation (state machine) (OVTASK-328):** the cut-out speed and stop conditions (CutOut_RotSpd) and the stop power ramps (CutOut_*) act in the same stop: the ramp time must suit the speed at which the stop starts."
    ],
    "risk": [
     "Stop ramps too fast: drivetrain torque reversal and tower loads; too slow: overspeed during the stop. Wrong effective power change: wrong feed-forward to the pitch."
@@ -1400,11 +1406,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Pitch** and **Speed-Power Controllers:** their speed references (the speed-pitch set point is ActRef.Speed + SpeedShift_Pitch)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the speed shift between the pitch and power speed references (SpdShift_*) sets how far the rotor speed must rise before pitch acts: it changes the speed excursions around rated.",
+    "- **Speed-Power Controller (PI) (OVTASK-159):** the speed shift between the pitch and power speed references (SpdShift_*) decides at which speed torque stops increasing and pitch takes over: it changes the speed-power loop behaviour near rated."
    ],
    "affected_by": [
-    "- **Power Control States** (regulated power) and **Speed-Pitch Controller** (pitch and its derivative): ramp-rate calculation.",
-    "- Pitch Trajectory Offsets (minimum pitch), Reduction Interface (active speed reference), external speed offsets."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Shift too small: the two controllers interact (power and pitch oscillations around rated). Too large: speed deviations and AEP loss, overspeed margin reduced."
@@ -1432,11 +1439,15 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch commands per blade** (FuncSche_PitcAngComA/B/C) and the activation / amplitude inputs of IPC, TTCC and PDA (main use)."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- **IPC**, **TTCC**, **PDA**, **BLL**, **GILL:** their offsets and activation levels.",
-    "- Operation state, IPC-assisted yawing, Power Control States (power-reference change for GILL), Flex Configuration."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Individual Pitch Control (IPC) (OVTASK-133):** the IPC pitch amplitudes allowed per state (FuncSche_IPCAllowedPitAmp*) are set from the amplitude the tuned IPC needs.",
+    "- **Tip to Tower Clearance Controller (TTCC) (OVTASK-128):** the maximum TTCC offset (TTCC_PitOffsetMax) in the scheduler bounds the TTCC action.",
+    "- **Blade Load Limiter (BLL) (OVTASK-127):** the priority between BLL and PDA (FuncSche_BLLPDA_PrioritizationMode) decides which pitch offset wins when both act.",
+    "- **Gust Induced Load Limiter (GILL) (OVTASK-130):** the priority between GILL and PDA (FuncSche_GILLPDA_PrioritizationMode) decides which pitch offset wins when both act.",
+    "- **Pitch Damage Attenuator (PDA) (OVTASK-136):** the PDA activation level in operation (FuncSche_PDAActivationLevelOperat) and its priority against BLL / GILL depend on how much pitch travel PDA removes."
    ],
    "risk": [
     "Wrong priorities: compounded pitch-out (AEP loss, overspeed), or PDA cancelling a protective action (extremes, clearance)."
@@ -1464,13 +1475,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Converter Interface:** PwTwrDamp is added to the power reference (main actuation).",
-    "- **Dynamic Power Envelope:** amplitude estimate for the margin; **Wind Speed Estimator:** the damping power is subtracted from the power input."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Dynamic Power Envelope (OVTASK-143):** the power envelope reserves headroom for the damping power of the side-side tower damper (ATD_X_MaxPwr and the ATD power estimate in the envelope): the reserve is sized from the power the tuned damper needs."
    ],
    "affected_by": [
-    "- **Nacelle Acceleration Filter:** NacAccFi__AccSsBp (side-side acceleration, main input).",
-    "- **Tower Frequency Estimator:** 1st / 2nd tower frequencies for the filters and their status.",
-    "- Dynamic Power Envelope (power limit), GFRT (scaling), park pilot settings; Power Control States and Rotor Speed Filter only for gain scheduling."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong phase or gain: no damping or negative damping of the side-side mode (tower fatigue up); too much power oscillation: drivetrain loads, flicker."
@@ -1498,11 +1507,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- Pitch servo (references RaPiRefA/B/C) and the Pitch Motion evaluation; physically every pitch-based loop."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the maximum pitch-reference rate and deadband (SpdPit_PitRefMaxRate, PitRefDeadband) bound what the speed loop can command: a rate limit hit in gusts or grid faults saturates the loop (larger speed peaks); the deadband reduces pitch activity but adds a dead zone in the loop.",
+    "- **Individual Pitch Control (IPC) (OVTASK-133):** the same rate limit applies to collective plus cyclic pitch: it bounds the IPC amplitude that can be added at high collective activity."
    ],
    "affected_by": [
-    "- **Speed-Pitch Controller:** PitchRefCollective (main input); Pitch Service Mode offsets.",
-    "- Pitch-system capability (physical limits)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Rate limit too low: speed loop and load handles saturated (overspeed, higher loads). Too high: pitch-system overload."
@@ -1530,11 +1540,16 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Power Controller** (speed reference along the curve), **Pitch Trajectory Tables** (OPCS), **RSA**, **Power Estimator** (running power curve)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Power Controller (PI) (OVTASK-159):** the speed-power curve is the trajectory the speed-power loop follows in partial load: its slope sets the loop gain needed and the torque the drivetrain sees.",
+    "- **Pitch Trajectory Tables: Opti-Pitch Curve (OVTASK-140):** the curve sets the tip-speed ratio at each wind speed, and the optimal pitch is defined for that tip-speed ratio: curve and opti-pitch are designed together.",
+    "- **Power Trajectory: Scaling of the Speed-Power Curve during Start-Up (OVTASK-115):** the scaling of the speed-power curve at start-up is applied to this curve.",
+    "- **Resonance Speed Avoider (RSA) (OVTASK-162):** the speed window avoided by RSA lies on the curve: the power levels at the window edges, and so the time to cross the window, depend on the curve.",
+    "- **Speed Limit by Power (SLP) (OVTASK-112):** the speed limited by power is a cut of the speed-power curve."
    ],
    "affected_by": [
-    "- Rotor aerodynamics (physical): the optimal curve comes from the power-coefficient tables.",
-    "- Speed-Pitch Controller, Pitch Trajectory Offsets and Reduction Interface (scaling factor of the curve)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Flex Configuration (OVTASK-307):** the rated power (PwrDesign) is the end point of the speed-power curve."
    ],
    "risk": [
     "Sub-optimal curve: AEP loss; too high speeds in partial load: noise and loads."
@@ -1562,10 +1577,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Power Controller:** scaled speed-power curve during start-up."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- Converter state (cut-in detection), Speed-Pitch Controller (pitch and speed reference), Pitch Trajectory Offsets (minimum pitch), Reduction Interface (active speed reference)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Power Trajectory: Speed-Power Curve (OVTASK-308):** the scaling of the speed-power curve at start-up is applied to this curve."
    ],
    "risk": [
     "Wrong scaling: slow start-ups (availability), speed undershoot or torque transients at cut-in."
@@ -1593,12 +1609,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Turbine stops for inspection (availability, structural safety)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- **Tower Frequency Estimator:** status and reset (main input).",
-    "- Nacelle Acceleration Sensor Validation (sensor status).",
-    "- Tower and foundation properties (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Threshold too tight: false stops. Too loose: structural damage not detected."
@@ -1626,12 +1640,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Rotor Speed Filter** (rotor acceleration RSF__RotAcc), **Reverse Rotor Speed Monitor** (rotation direction), Rotor Azimuth Estimator (hub speed estimate)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed Mismatch Monitor (OVTASK-336):** the fused speed and the source mask (RSF_*) define which deviation between sensors is normal, which sets the mismatch limits."
    ],
    "affected_by": [
-    "- **Speed Measurement Validator:** status of each speed source (main input).",
-    "- Rotor Azimuth Estimator (hub speed).",
-    "- Installed sensors (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong fusion or mask: noisy or biased rotor speed / acceleration in all speed-based functions, wrong reaction to a failed sensor."
@@ -1659,12 +1672,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Trajectory Offsets:** PitchOffsetYMM added to the minimum pitch.",
-    "- **Yaw Offset Interface:** large misalignment flags."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- Measured yaw misalignment (wind vane) and **Wind Speed Estimator** (equivalent wind speed, filtered).",
-    "- Operation state and Yaw Offset Interface (activation)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Limits too loose: high blade and hub loads with large yaw error. Too tight: unnecessary pitch offsets (AEP)."
@@ -1692,10 +1703,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Trajectory Tables** (density-compensated opti-pitch), **Pitch Trajectory Offsets**, **Wind Speed and Thrust Estimators**, **Low Power Detector**, Inertial Response, LIDAR processing."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Wind Speed Estimator (OVTASK-155):** the aerodynamic power scales with air density: the density used in the inversion of the power table sets the bias of the wind speed estimate.",
+    "- **Pitch Trajectory Tables: Opti-Pitch Curve (OVTASK-140):** the opti-pitch curve and its air-density compensation depend on the density: the optimum pitch and the thrust at a given wind speed change with it."
    ],
    "affected_by": [
-    "- Ambient temperature and pressure measurements / site altitude."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong density: biased wind and thrust estimates, wrong opti-pitch at low density (AEP or loads), false low-power detections."
@@ -1723,11 +1736,13 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Ice-related stops / operation modes (OWI) and performance alarms."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Ice Detector (OVTASK-277):** aerodynamic ice detection uses the low-power detection: its threshold sets how early ice is detected."
    ],
    "affected_by": [
-    "- **Power Estimator:** running power curve points (main reference).",
-    "- **Air Density**, **Wind Speed Estimator** (yaw-misalignment correction), Flex Configuration, Operation with Ice (de-icing status)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Power Estimator (OVTASK-142):** the low-power detection compares the produced power with a percentage of the expected power: the margin (LPDC_*PercentOfPwrCrv) must cover the error of the expected power.",
+    "- **Operation with Ice (OWI) (OVTASK-158):** operation with ice lowers the power curve on purpose (de-icing / anti-icing modes): the low-power thresholds per mode (LPDC_OWI_*, LPDC_AntiIce_*) are set for that power loss."
    ],
    "risk": [
     "Too sensitive: false ice / performance stops. Too insensitive: iced operation not detected (ice throw risk, loads)."
@@ -1755,10 +1770,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **IPC** (inverse Coleman transform), **TTCC** (azimuth window in front of the tower), Blade Edge Frequency Monitor, Blade Moment Monitor, Controller Safe Mode (status)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Individual Pitch Control (IPC) (OVTASK-133):** IPC transforms the blade moments to tilt / yaw and back with the rotor azimuth: an azimuth offset or delay rotates the tilt / yaw axes, so the IPC gain and phase are only valid for a correct azimuth.",
+    "- **Tip to Tower Clearance Controller (TTCC) (OVTASK-128):** the tower-passage window (TTCC_ActivationLvl_AziStart / AziEnd) is defined in azimuth: azimuth errors move the window away from the real tower passage."
    ],
    "affected_by": [
-    "- Hub orientation sensors, **Speed Source Interface** (rotor speed), Rotor Speed Filter (source selection / calibration), Coupling Conditions (cut-out speed)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Azimuth phase error: IPC adds load instead of removing it, TTCC pitches the wrong blade; invalid status: load handles fall back to safe mode."
@@ -1784,10 +1801,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Generator torque reference (legacy STC1 path) and drivetrain loads."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Dynamic Power Envelope (OVTASK-143):** when the legacy damper is the active one, its power saturation (ADTD_PwrSat) is the damping power the envelope must reserve.",
+    "- **Drive Train Oscillation Monitor (DTOM) (OVTASK-146):** when the legacy damper is the active one, the residual drivetrain oscillation after damping sets the normal level the oscillation monitor sees."
    ],
    "affected_by": [
-    "Generator speed measurement and the drivetrain dynamics (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "If enabled and mistuned: torsional oscillations or interaction with ADTD2. Confirm whether the legacy damper is used at all."
@@ -1814,10 +1833,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **High Wind Operator:** active wind limit (WindLim__ActWL6) shifts its trajectories; stops at high wind."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- **Wind Speed Filter** (primary / secondary anemometer averages, main input), Controller Safe Mode (reduced wind limits)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **High Wind Operator (HWO) (OVTASK-154):** the wind limits for stop and restart (WL_High_*) must be consistent with the HWO cut-out window (HWO_*Cutout*, WindSpdCurtWinWidth): otherwise the turbine stops before or after HWO has curtailed."
    ],
    "risk": [
     "Limits too high: operation above the design wind (loads). Too low: AEP loss and frequent stops."
@@ -1845,10 +1865,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Active power reference (Reduction Interface) and, through it, the speed controllers."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "Park controller / grid-operator commands."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Grid-code non-compliance; speed and pitch transients when the set point changes quickly."
@@ -1875,10 +1895,17 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Wind Speed Estimator**, **Thrust Estimator**, **Power Estimator**, Power Boost, Inertial Response (all use the rotor performance tables)."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Wind Speed Estimator (OVTASK-155):** the estimator inverts the rotor power table (RotPerfData_PwrTbl): any error of the aerodynamic table becomes a bias of the estimated wind speed over the whole range.",
+    "- **Thrust Estimator (OVTASK-153):** the thrust estimate is read from the rotor thrust table (RotPerfData_ThrustTbl, ThrustNom).",
+    "- **Power Estimator (OVTASK-142):** the available power is computed from the rotor power table: table errors appear directly in the estimate.",
+    "- **Speed-Pitch Controller: Aerodynamic Gain Scheduling (OVTASK-125):** the aerodynamic sensitivity dP/dpitch that the gain schedule compensates comes from the same rotor aerodynamics: a new rotor or new tables require a new schedule.",
+    "- **Pitch Trajectory Tables: Opti-Pitch Curve (OVTASK-140):** the optimal pitch per tip-speed ratio is the maximum of the power coefficient of the rotor tables.",
+    "- **Power Boost (OVTASK-141):** the boost criteria use the rotor power table to judge the margin to rated power and loads.",
+    "- **Inertial Response (IR) (OVTASK-108):** the power that can be extracted during and after the inertial response is computed from the rotor power table."
    ],
    "affected_by": [
-    "Blade aerodynamics (physical): tables generated from the aeroelastic model."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong tables: biased wind and thrust estimates in every function scheduled on them (speed-pitch gains, HWO, ACS, GILL)."
@@ -1905,10 +1932,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Operation with Ice (mode selection), stops for ice."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **No Cut In Detector (OVTASK-281):** the no-cut-in decision with ice uses the ice detector status: its sensitivity decides when the turbine may not start."
    ],
    "affected_by": [
-    "Ice sensors, Low Power Detector, the IceDeTyp / DeIceTyp type selections."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Low Power Detector (OVTASK-278):** aerodynamic ice detection uses the low-power detection: its threshold sets how early ice is detected."
    ],
    "risk": [
     "Ice not detected: ice throw risk and loads with iced rotor. False detections: availability loss."
@@ -1934,10 +1963,11 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Alarms and ice handling (availability)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "Wind speed measurement, start-up sequence (Operation), DeIceTyp type selection."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Ice Detector (OVTASK-277):** the no-cut-in decision with ice uses the ice detector status: its sensitivity decides when the turbine may not start."
    ],
    "risk": [
     "False alarms: unnecessary stops. Missed detection: turbine idle without reason or iced rotor not handled."
@@ -1963,10 +1993,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Motoring operations (stop when the consumption is too high)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "Power measurement and the motoring mode (converter / service functions)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Limit too low: motoring aborted (service delays). Too high: overload of the drivetrain / converter while motoring."
@@ -1993,10 +2023,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Rotor Speed Filter** (raw speed), **Overspeed Monitor** (1 s averages), **ADTD2** (generator speed LSS), Wind Speed / Thrust Estimators, ACS, monitors: every speed consumer."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Rotor Speed Filter (OVTASK-121):** the selected speed source (generator or rotor speed sensor) sets the resolution, noise and delay of the measured speed: the filter chain (low-pass, notches, lead) is dimensioned for that noise and delay.",
+    "- **Speed Mismatch Monitor (OVTASK-336):** the mismatch limits (SpdMiMon_*) are set from the expected deviation between the selected speed sources."
    ],
    "affected_by": [
-    "- Installed speed sensors and their validation; Drive Train Oscillation Monitor (disables a source)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong source or fallback: wrong or delayed speed in every loop, overspeed protection on a bad signal."
@@ -2022,10 +2054,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Blade Edge Frequency Monitor** (edge moments and status) and, through the blade status, the load handles using blade moments (BLL, GILL, IPC, TTCC, PDA) and the Controller Safe Mode."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- Blade Load Sensor Driver / calibration, Rotor Azimuth Estimator (status), Wind Speed Estimator."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Too tight: false sensor faults (load handles off, safe mode, AEP). Too loose: load handles act on wrong moments."
@@ -2051,10 +2083,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Stops / actions on reverse rotation."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- **Rotor Sensor Fusion:** rotation direction (RSF_RotDirSt, main input)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Missed reverse rotation: damage to bearings / gearbox lubrication. False detections: unnecessary alarms."
@@ -2080,10 +2112,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed Source Interface:** DTOMx__Disable invalidates an oscillating speed source; turbine stops."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- Speed signals and the drivetrain modes (physical); ADTD2 (damping reduces the oscillation levels)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Active Drive Train Damper 2 (ADTD2) (OVTASK-292):** the residual drivetrain oscillation after damping sets the normal level the oscillation monitor sees: its limits (DTOM_Str*_Lim) are set above that level.",
+    "- **Active Drive Train Damper (ADTD, legacy) (OVTASK-145):** when the legacy damper is the active one, the residual drivetrain oscillation after damping sets the normal level the oscillation monitor sees."
    ],
    "risk": [
     "Too tight: nuisance stops after grid faults. Too loose: drivetrain damage from sustained oscillation."
@@ -2111,11 +2145,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Stops for blade inspection (structural safety, availability)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- **Blade Moment Monitor** (edge moments and blade status, main input), Rotor Azimuth Estimator, Rotor Speed Filter (whirling frequency only).",
-    "- Blade structural properties (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Too tight: false stops. Too loose: blade damage not detected."
@@ -2141,10 +2174,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Trajectory Offsets:** BldFlpVb__PitOff; **Reduction Interface:** BldFlpVb__SpdRed (speed reduction)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "Blade flap measurements and Speed-Pitch Controller (event data)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Too tight: unnecessary derating. Too loose: blade fatigue or flap instability."
@@ -2170,10 +2203,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Order Tracker Monitor:** 2P / nP amplitudes of the generator speed (alarms)."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "Speed signals, gear ratio (GearType) and the rotor speed."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong tracking: false imbalance / drivetrain alarms or missed detection."
@@ -2199,10 +2232,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Wind Speed Estimator:** PwrInflow_PwrEst as power input (and through it every wind-scheduled function)."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "Electrical power, rotor speed / acceleration and the rotor-system inertia (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Wrong inertia: biased wind estimate during accelerations (gain scheduling, HWO, ACS)."
@@ -2228,10 +2261,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Rotor Sensor Fusion:** status of each source (which sources are fused)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "Installed speed sensors (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "False invalidation: degraded speed estimate; missed fault: bad source used for control and protection."
@@ -2257,10 +2290,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Turbine stops on slip (drivetrain protection)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "Rotor-side and generator-side speed / angle measurements, gear ratio, drivetrain stiffness (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Too tight: false stops after torque transients. Too loose: drivetrain damage not detected."
@@ -2286,10 +2319,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Performance / ice information (observer mode: no control action)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- **Wind Speed Estimator** (filtered estimate and status), wind measurement, Operation with Ice (external ice sensor data)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Wind Speed Estimator (OVTASK-155):** the monitor compares the measured wind speed with the estimate: the normal error band (RotPerfM_WindSpdError*) depends on the accuracy of the estimator.",
+    "- **Operation with Ice (OWI) (OVTASK-158):** operation with ice lowers the power curve on purpose (de-icing / anti-icing modes): the wind speed error accepted per ice mode (RotPerfM_WindSpdError*Ice*) follows the performance loss of the iced rotor in each mode."
    ],
    "risk": [
     "Observer mode: wrong thresholds only produce wrong information, no control action."
@@ -2315,10 +2350,12 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "Alarms / source handling (Speed Source Interface)."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "Speed sources and their selection."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Speed Source Interface (OVTASK-97):** the mismatch limits (SpdMiMon_*) are set from the expected deviation between the selected speed sources.",
+    "- **Rotor Sensor Fusion (RSF) (OVTASK-96):** the fused speed and the source mask (RSF_*) define which deviation between sensors is normal, which sets the mismatch limits."
    ],
    "risk": [
     "Too tight: false alarms after transients. Too loose: faulty speed sensor not detected."
@@ -2345,11 +2382,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Trajectory Offsets:** OffPitch_EdgVbMon; **Reduction Interface:** GSVibrat__SpdRed (speed reduction); stops."
+    "None to a high degree: its parameters only set alarm / stop limits; they do not change how other functions control the turbine (a wrong limit gives false or late stops, not a different tuning)."
    ],
    "affected_by": [
-    "- Blade edge moments / accelerations, Speed Source Interface (rotor speed for the 1P band-stop), Speed-Pitch Controller (pitch-angle compensation and event data).",
-    "- Blade edgewise modes (physical)."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Too tight: unnecessary derating / stops. Too loose: edgewise vibrations not stopped (blade damage)."
@@ -2377,10 +2413,10 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Reduction Interface:** HTRTCtrl__PRedDera (power derating); **Power Boost:** speed-boost activation."
+    "None to a high degree: changing its tunable parameters does not change the conditions for which other functions are tuned."
    ],
    "affected_by": [
-    "- Component temperatures and thermal models (HTRTType selects the configuration), rated / design power."
+    "None to a high degree: its tunable parameters are set from the turbine design and measurements, not from the tuning of other functions."
    ],
    "risk": [
     "Derating too late: component over-temperature and trips. Too early: AEP loss in hot climates."
@@ -2410,20 +2446,14 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Pitch Controller:** RotSpdFi_SpdLead is the speed feedback of the PI (speed error, reference saturation and ramping) and, low-pass filtered, a gain-scheduling input: filter phase and lead gain set the loop margin and the gust response.",
-    "- **Speed-Power Controller:** RotSpdFi_Spd is its PI feedback and gain-scheduling input; RotSpdFi_SpdLead selects the operating point on the active power envelope.",
-    "- **Converter Interface:** RotSpdFi_Spd converts the power reference into the generator torque reference and the electrical limits: filter delay or residual ripple appears directly in the torque and the drivetrain loads.",
-    "- **Resonance Speed Avoider:** the RSA state machine and the window speed references use the filtered speed: delay causes late window crossings and more time near the tower resonance.",
-    "- **ESFE:** SpdFilt_nPGnrcSpd is the signal ESFE estimates the edgewise frequencies from (closed loop with the 1ES-3ES notches).",
-    "- **Grid Fault Ride Through** (state machine and speed-pitch gain scaling during grid faults) and Power Control States (speed-dependent stop ramp).",
-    "**Only scheduling or nP frequency** (they need the correct mean speed, not the filter dynamics): ADTD2 (3P notch frequency and lead-factor scheduling; its damping algorithm uses the unfiltered GenSdSpd_ValueLSS), Active Tower Damper Side-Side (gain proportional to rotor speed), BLL (3P dead-band), GILL (3P / 6P / 9P tracking notches on the blade moments; the RotAcc type that would use RotAccFi__Acc is disabled), IPC and TTCC (3P frequency, azimuth shift), Nacelle Acceleration Filter (nP tracking notches), PDA (speed activation level).",
-    "The Controller Overspeed Monitor (listed in the Jira example) does not use the filtered speed: it monitors the 1 s averages of the Speed Source Interface."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the phase lag of the notch, low-pass and lead filters at the speed-loop crossover sets the phase margin left for the PI: changing the filters (1ES-3ES, 3P, 2T, lead) requires re-checking Kp and Ti.",
+    "- **Speed-Power Controller (PI) (OVTASK-159):** the phase lag of the speed filters at the crossover of the speed-power PI in partial load limits the gain that keeps a stability margin: changing the filters requires re-checking the PI gains."
    ],
    "affected_by": [
-    "- **Speed Source Interface:** RotSpd_Value is the raw speed entering the filter chain (source selection and its delay).",
-    "- **ESFE:** ESFE_Freq1ES-3ES are the centre frequencies of the 1ES-3ES notches; a wrong estimate moves the notch away from the mode.",
-    "- **Tower Frequency Estimator:** TwrFrqPr_Freq2nd / Stat2nd place the tower 2nd-mode notch.",
-    "- Rotor Sensor Fusion (RSF__RotAcc, rotor acceleration path) and the design rotor speed (3P / 6P notch frequencies)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Speed Source Interface (OVTASK-97):** the selected speed source (generator or rotor speed sensor) sets the resolution, noise and delay of the measured speed: the filter chain (low-pass, notches, lead) is dimensioned for that noise and delay.",
+    "- **Edgewise Synchronous Frequency Estimator (ESFE) (OVTASK-120):** the 1ES-3ES band-stop filters are centred on the ESFE estimates: the frequency range, initial frequency and threshold of ESFE decide whether the notches sit on the actual edgewise modes. A notch off the mode leaves edgewise content in the speed feedback and adds phase lag at the wrong frequency."
    ],
    "risk": [
     "**Band-stop filters (3P, 6P, 1ES-3ES, tower 2nd):** a mistuned notch lets harmonic or structural content into the pitch and power control: unintended pitch and power contributions, higher pitch bearing damage and excitation of blades, tower and drivetrain (fatigue, reduced lifetime). Too wide notches add phase delay to the speed loop.",
@@ -2458,21 +2488,30 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Reference Limiter:** saturates and rate-limits each blade reference built on PitchRefCollective (the command sent to the pitch system).",
-    "- **Pitch Trajectory Offsets:** the load-handle offsets and minimum-pitch shift are applied on top of PitchRefCollective; MinPitchLimitActive drives the pitch-limit-by-wind logic.",
-    "- **IPC:** cyclic pitch on top of the collective; its amplitude limits use the collective pitch.",
-    "- **Pitch Control States:** stop-zone pitch-rate limits and the minimum pitch rate (SpdPit_RotSpdErrDsgn).",
-    "**Pitch as operating-point / scheduling variable** (their behaviour shifts when the pitch behaviour changes): Wind Speed and Thrust Estimators (aerodynamic tables; their estimates schedule other functions), GILL (gain scheduling of the BLS type), TAL and PDA (activation level), SLCP (speed curtailment from the collective pitch, flutter boundary), Power Trajectory (speed-power curve scaling with SpdPitch__SpdRefSR), Speed Control Scheduler (pitch derivative sets the power / speed ramp rate), RSA (pitch gap buffer), Power Boost criteria, GFRT (ActSpdRefPitCtrl in the gain scaling).",
-    "Monitors (overspeed, blade and tower vibration) use PitchRefCollective only for event data."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Speed-Pitch Controller: Aerodynamic Gain Scheduling (OVTASK-125):** the schedule is relative to the reference gains Kp / Ti: changing them changes the gain at every scheduled point.",
+    "- **Speed-Power Controller (PI) (OVTASK-159):** near rated both loops are active around the transition: their bandwidths and the speed shift between their references decide whether they hand over smoothly or fight each other.",
+    "- **Blade Load Limiter (BLL) (OVTASK-127):** the extreme flapwise moments in gusts depend on how fast the speed loop pitches out: BLL thresholds and gain are set on the extremes left after the speed loop, so a new PI tuning requires re-checking BLL.",
+    "- **Gust Induced Load Limiter (GILL) (OVTASK-130):** the gust load left after the speed-loop response is what GILL has to remove: a new PI tuning changes the gust extremes and requires re-checking the GILL thresholds and gains.",
+    "- **Tower Acceleration Limiter (TAL) (OVTASK-139):** the tower fore-aft motion that TAL reacts to is driven by the thrust changes the speed loop makes: a faster loop excites or damps the tower 1st fore-aft mode differently, so the TAL activation levels must be re-set.",
+    "- **Adaptive Control Strategy (ACS) (OVTASK-152):** the tower and blade load levels ACS reacts to are set by the speed-loop response: the escalation thresholds must be set on the final loop.",
+    "- **Pitch Damage Attenuator (PDA) (OVTASK-136):** the collective pitch activity of the speed loop is the main source of pitch bearing damage at high wind: the PDA activation thresholds (pitch speed, bearing moment) depend on it.",
+    "- **Controller Overspeed Monitor (OVTASK-123):** the overspeed peaks in gusts and grid faults depend on the loop bandwidth: the overspeed limits need a margin above the peaks of the final tuning, or they alarm (too low) or protect late (too high).",
+    "- **Resonance Speed Avoider (RSA) (OVTASK-162):** RSA moves the speed-pitch reference and loop gain to cross the resonance window; its activation and mode-switch times (RSA_SpdPitCtrlActivationTime, RSA_TimePitModeSwitch) assume the speed-loop response, so they must be re-checked when the loop changes.",
+    "- **Speed Control Scheduler: Full Power State Machine (OVTASK-160):** the pitch fluctuations around the minimum pitch near rated, set by the loop, decide whether the full-power state toggles: the gap to minimum pitch and the times (FPSM_*) are set for them.",
+    "- **Tower Vibration Monitor (OVTASK-310):** the normal tower fore-aft acceleration level comes from the speed-loop response: the vibration limits must stay above it with margin.",
+    "- **Grid Fault Ride Through (GFRT) (OVTASK-301):** after a grid fault the speed loop must stop the acceleration: the post-fault gain reduction and its time window (GFRT_Post_*SpdPit*) scale the tuned PI gains."
    ],
    "affected_by": [
-    "- **Rotor Speed Filter:** RotSpdFi_SpdLead is the speed feedback and a gain-scheduling input.",
-    "- **Pitch Servo Controller:** the actuator dynamics are inside the speed loop (physical coupling, no signal link).",
-    "- **Wind Speed Estimator:** WinAvail__SpdRotEq is a gain-scheduling input.",
-    "- **Resonance Speed Avoider:** RSA_SpdPitchCtrlGain scales the gains and RSA_SpdPitchRef moves the speed reference.",
-    "- **Grid Fault Ride Through:** FRTPCtrl__SpdPiGn scales the gains, GFRT_State and GFRT_TimeActPhase drive the grid-fault feed-forward.",
-    "- **Overspeed Monitor:** OvSpdMon__TtoLim (time to the active overspeed limit) scales the pitch feed-forward gain.",
-    "- Power Control States (EffPwrRefChange feed-forward), Pitch Trip Avoider (feed-forward), Torque Mismatch Detector (gain modification), Pitch Control States (states, pitch limits and ramps), Speed Control Scheduler (forced reference change)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Pitch Servo Controller (PSC) (OVTASK-132):** the pitch actuator is inside the speed loop: its bandwidth, deadband and gain schedule (PSC_Kp, Ki, KpDeadband, filters) add phase lag at the speed-loop crossover and limit the PI gains that keep a stability margin.",
+    "- **Pitch Reference Limiter (OVTASK-296):** the maximum pitch-reference rate and deadband (SpdPit_PitRefMaxRate, PitRefDeadband) bound what the speed loop can command: a rate limit hit in gusts or grid faults saturates the loop (larger speed peaks); the deadband reduces pitch activity but adds a dead zone in the loop.",
+    "- **Pitch Control States: General Pitch Rate Limits (OVTASK-131):** the general pitch-rate limits (SpdPit_MaxPitRefRatePos / Neg) bound the pitch rate of the speed loop: when they are reached the loop saturates and speed peaks grow.",
+    "- **Rotor Speed Filter (OVTASK-121):** the phase lag of the notch, low-pass and lead filters at the speed-loop crossover sets the phase margin left for the PI: changing the filters (1ES-3ES, 3P, 2T, lead) requires re-checking Kp and Ti.",
+    "- **Speed-Pitch Controller: Aerodynamic Gain Scheduling (OVTASK-125):** the PI is tuned at a reference operating point and the schedule extends it to the full-load range: a change of the schedule changes the loop gain and margins in the rest of the range, and the reverse.",
+    "- **Speed-Power Controller (PI) (OVTASK-159):** the speed-power loop bandwidth at rated sets the speed excursions the speed-pitch loop meets at the transition from partial to full load.",
+    "- **Speed Control Scheduler: Speed Shifter (OVTASK-163):** the speed shift between the pitch and power speed references (SpdShift_*) sets how far the rotor speed must rise before pitch acts: it changes the speed excursions around rated.",
+    "- **Grid Fault Ride Through (GFRT) (OVTASK-301):** the speed-pitch gain scaling during and after a grid fault (GFRT_Post_*SpdPit*) changes the effective loop gain the PI was tuned for, and so the speed recovery after the fault."
    ],
    "risk": [
     "Too soft: larger speed excursions, overspeed peaks, alarms or stops in gusts and grid faults, higher tower fore-aft extremes in DLC 1.4.",
@@ -2509,16 +2548,16 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Trajectory Offsets:** BLL_PitchOff is combined with the other load offsets and shifts the minimum pitch / PitchRefCollective.",
-    "- **Controller Functionality Scheduler:** BLL / PDA prioritisation uses BLL_PitchOff and its rate.",
-    "- **Controller Safe Mode:** BLL_Status triggers the safe-mode derating when the blade-load signals are not valid.",
-    "- Indirectly the Speed-Pitch Controller (raised minimum pitch) and AEP."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Gust Induced Load Limiter (GILL) (OVTASK-130):** BLL and GILL both raise the minimum pitch against high flapwise loads: their thresholds and gains overlap and are tuned together so that one does not hide or double the other.",
+    "- **Controller Safe Mode (OVTASK-129):** the safe-mode derating when BLL / GILL are unavailable (SafeMode_BLLandGILL_*) must compensate their load reduction.",
+    "- **Controller Functionality Scheduler (OVTASK-135):** the priority between BLL and PDA (FuncSche_BLLPDA_PrioritizationMode) decides which pitch offset wins when both act."
    ],
    "affected_by": [
-    "- **Moment Transformations:** MomTrans_A/B/COopMom are the out-of-plane moments the peak estimate is built on; MomTStat_* are their status (validity check).",
-    "- **Blade Load Sensor Driver / calibration:** absolute thresholds are only meaningful with calibrated blade loads.",
-    "- **Speed-Pitch Controller and Pitch Trajectory Tables:** physical coupling: BLL acts on top of the collective pitch and the minimum-pitch baseline, which must be final first.",
-    "- Rotor Speed Filter only for the 3P dead-band of the peak estimate."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Pitch Trajectory Offsets: Pitch Limit by Wind (PLBW) (OVTASK-138):** the minimum pitch at high wind reduces the thrust and the flapwise moment: BLL thresholds and gain act on the extremes left after this offset.",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the extreme flapwise moments in gusts depend on how fast the speed loop pitches out: BLL thresholds and gain are set on the extremes left after the speed loop, so a new PI tuning requires re-checking BLL.",
+    "- **Gust Induced Load Limiter (GILL) (OVTASK-130):** BLL and GILL both raise the minimum pitch against high flapwise loads: their thresholds and gains overlap and are tuned together so that one does not hide or double the other."
    ],
    "risk": [
     "Threshold too low: unnecessary pitch-out and AEP loss above the design rule. Threshold too high: flap extremes and tip-tower clearance not protected.",
@@ -2551,16 +2590,17 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Pitch Trajectory Offsets:** GILL__PitchOff is combined with the other load offsets and shifts the minimum pitch / PitchRefCollective.",
-    "- **Controller Functionality Scheduler:** GILL / PDA prioritisation.",
-    "- **Controller Safe Mode:** GILL__BLSSt (BLS status) triggers the safe-mode derating.",
-    "- Indirectly the tower response shared with TAL and the Speed-Pitch Controller, and AEP."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Blade Load Limiter (BLL) (OVTASK-127):** BLL and GILL both raise the minimum pitch against high flapwise loads: their thresholds and gains overlap and are tuned together so that one does not hide or double the other.",
+    "- **Controller Safe Mode (OVTASK-129):** the safe-mode derating when BLL / GILL are unavailable (SafeMode_BLLandGILL_*) must compensate the load reduction the tuned GILL gives.",
+    "- **Controller Functionality Scheduler (OVTASK-135):** the priority between GILL and PDA (FuncSche_GILLPDA_PrioritizationMode) decides which pitch offset wins when both act."
    ],
    "affected_by": [
-    "- **Moment Transformations:** MomTrans_A/B/COopMom form the average out-of-plane moment (after band-stop filtering) whose rate is the GILL detection signal; MomTStat_* are their status.",
-    "- **Speed-Pitch Controller:** PitchRefCollective is the gain-scheduling input of the BLS type.",
-    "- **Controller Functionality Scheduler:** GILL off flags (status handling).",
-    "- Rotor Speed Filter only for the 3P / 6P / 9P tracking notches; Thrust Estimator only for the disabled rotor-acceleration type."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Thrust Estimator (OVTASK-153):** GILL is gain-scheduled with the normalised thrust estimate: its gains are only valid if the thrust estimate is correct at the gust conditions.",
+    "- **Pitch Trajectory Offsets: Pitch Limit by Wind (PLBW) (OVTASK-138):** the minimum pitch at high wind sets the flapwise load from which a gust starts: the gust load GILL must remove, and so its thresholds and gains, depend on this offset.",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the gust load left after the speed-loop response is what GILL has to remove: a new PI tuning changes the gust extremes and requires re-checking the GILL thresholds and gains.",
+    "- **Blade Load Limiter (BLL) (OVTASK-127):** BLL and GILL both raise the minimum pitch against high flapwise loads: their thresholds and gains overlap and are tuned together so that one does not hide or double the other."
    ],
    "risk": [
     "Thresholds too low or filter too fast: activation in normal turbulence, AEP loss and pitch wear. Thresholds too high or filter too slow: delayed response (about 0.1 s penalty in gust cases), tower extremes not shaved.",
@@ -2593,16 +2633,17 @@
     "[P] Classification proposed."
    ],
    "affects": [
-    "- **Speed-Pitch Controller:** OvSpdMon__TtoLim (time to the active limit) scales the pitch feed-forward gain.",
-    "- **Pitch Damage Attenuator:** OvSpdMon__Lim1 sets the rotor-speed activation level.",
-    "- **Grid Forming Operator:** OvSpdMon__ActLim defines its overspeed limits.",
-    "- Availability and AEP (overspeed stops) and the protection-layer order with the safety system."
+    "Functionalities whose tuning must be repeated or re-checked when the tunable parameters of this one change:",
+    "- **Safety System Overspeed (SRSG) (OVTASK-107):** the safety-system overspeed limits must sit above the controller limits, with margin, so that the controller protection acts first."
    ],
    "affected_by": [
-    "- **Speed Source Interface:** RotSpdPr__1sAvg and RotSpdSe__1sAvg are the monitored speeds.",
-    "- **Reduction Interface:** ActRefSpeedRSA is the reference the adaptive low and high limits are computed from.",
-    "- **Grid Fault Ride Through / converter:** GFRT_iDipMode and the converter mode select the limits during grid dips.",
-    "- **Speed-Pitch Controller and the load handles** (BLL, GILL, IPC, TTCC, PDA, TAL): physical coupling: they set the speed peaks the margins are measured on (PitchRefCollective itself is only used for alarm event data)."
+    "Functionalities whose tuning changes the performance of this one to a high degree:",
+    "- **Pitch Control States: General Pitch Rate Limits (OVTASK-131):** the pitch rates in stops and at high speed error set how fast the rotor is braked aerodynamically, and so the overspeed peaks the limits must accept.",
+    "- **Speed-Pitch Controller (PI) (OVTASK-122):** the overspeed peaks in gusts and grid faults depend on the loop bandwidth: the overspeed limits need a margin above the peaks of the final tuning, or they alarm (too low) or protect late (too high).",
+    "- **Speed-Pitch Controller: Feed-Forward (OVTASK-113):** the pitch feed-forward on power-reference changes and grid faults (SpdPit_DeltaPwrToPitFFGain, SpdPit_GFRT_*FF) decides how much speed rise the faults cause: the overspeed limits must cover the remaining peaks.",
+    "- **Speed-Pitch Controller: High Speed Gain (OVTASK-124):** the High Speed Gain (SpdPit_HSG_*) raises the loop gain near the speed limits: it sets the peak speed the overspeed limits have to accept.",
+    "- **High Wind Operator (HWO) (OVTASK-154):** the curtailed speed references at high wind change the reference against which the relative overspeed limits are set.",
+    "- **Tower Acceleration Limiter (TAL) (OVTASK-139):** TAL slows the pitch-out when the tower accelerates, also in stops: slower pitch-out gives higher speed peaks, which the overspeed limits must accept."
    ],
    "risk": [
     "Too low: nuisance overspeed stops (availability, AEP) and extra loads from the stops. Too high: no primary protection; the safety system trips instead (harder stops, higher loads) or the design overspeed is exceeded."
@@ -2610,6 +2651,573 @@
    "workflow": [
     "+Workflows/+ControllerTuning/+FaultDetectionAndAccomodation/workflow_OverspeedMonitor.m"
    ]
+  }
+ ],
+ "couplings": [
+  {
+   "from": "OVTASK-97",
+   "to": "OVTASK-121",
+   "reason": "the selected speed source (generator or rotor speed sensor) sets the resolution, noise and delay of the measured speed: the filter chain (low-pass, notches, lead) is dimensioned for that noise and delay."
+  },
+  {
+   "from": "OVTASK-97",
+   "to": "OVTASK-336",
+   "reason": "the mismatch limits (SpdMiMon_*) are set from the expected deviation between the selected speed sources."
+  },
+  {
+   "from": "OVTASK-96",
+   "to": "OVTASK-336",
+   "reason": "the fused speed and the source mask (RSF_*) define which deviation between sensors is normal, which sets the mismatch limits."
+  },
+  {
+   "from": "OVTASK-120",
+   "to": "OVTASK-121",
+   "reason": "the 1ES-3ES band-stop filters are centred on the ESFE estimates: the frequency range, initial frequency and threshold of ESFE decide whether the notches sit on the actual edgewise modes. A notch off the mode leaves edgewise content in the speed feedback and adds phase lag at the wrong frequency."
+  },
+  {
+   "from": "OVTASK-334",
+   "to": "OVTASK-133",
+   "reason": "IPC transforms the blade moments to tilt / yaw and back with the rotor azimuth: an azimuth offset or delay rotates the tilt / yaw axes, so the IPC gain and phase are only valid for a correct azimuth."
+  },
+  {
+   "from": "OVTASK-334",
+   "to": "OVTASK-128",
+   "reason": "the tower-passage window (TTCC_ActivationLvl_AziStart / AziEnd) is defined in azimuth: azimuth errors move the window away from the real tower passage."
+  },
+  {
+   "from": "OVTASK-338",
+   "to": "OVTASK-155",
+   "reason": "the aerodynamic power scales with air density: the density used in the inversion of the power table sets the bias of the wind speed estimate."
+  },
+  {
+   "from": "OVTASK-338",
+   "to": "OVTASK-140",
+   "reason": "the opti-pitch curve and its air-density compensation depend on the density: the optimum pitch and the thrust at a given wind speed change with it."
+  },
+  {
+   "from": "OVTASK-345",
+   "to": "OVTASK-155",
+   "reason": "the estimator inverts the rotor power table (RotPerfData_PwrTbl): any error of the aerodynamic table becomes a bias of the estimated wind speed over the whole range."
+  },
+  {
+   "from": "OVTASK-345",
+   "to": "OVTASK-153",
+   "reason": "the thrust estimate is read from the rotor thrust table (RotPerfData_ThrustTbl, ThrustNom)."
+  },
+  {
+   "from": "OVTASK-345",
+   "to": "OVTASK-142",
+   "reason": "the available power is computed from the rotor power table: table errors appear directly in the estimate."
+  },
+  {
+   "from": "OVTASK-345",
+   "to": "OVTASK-125",
+   "reason": "the aerodynamic sensitivity dP/dpitch that the gain schedule compensates comes from the same rotor aerodynamics: a new rotor or new tables require a new schedule."
+  },
+  {
+   "from": "OVTASK-345",
+   "to": "OVTASK-140",
+   "reason": "the optimal pitch per tip-speed ratio is the maximum of the power coefficient of the rotor tables."
+  },
+  {
+   "from": "OVTASK-345",
+   "to": "OVTASK-141",
+   "reason": "the boost criteria use the rotor power table to judge the margin to rated power and loads."
+  },
+  {
+   "from": "OVTASK-345",
+   "to": "OVTASK-108",
+   "reason": "the power that can be extracted during and after the inertial response is computed from the rotor power table."
+  },
+  {
+   "from": "OVTASK-155",
+   "to": "OVTASK-125",
+   "reason": "the estimated wind speed is a breakpoint of the gain schedule: an estimate bias moves the scheduled gain away from the actual operating point, mainly near rated where the aerodynamic sensitivity changes fastest."
+  },
+  {
+   "from": "OVTASK-155",
+   "to": "OVTASK-138",
+   "reason": "the pitch-limit-by-wind breakpoints (PLBW_WindSpd1 / 2) are defined on the estimated wind speed: a bias shifts the minimum pitch to other wind speeds, which changes thrust peaks and AEP."
+  },
+  {
+   "from": "OVTASK-155",
+   "to": "OVTASK-153",
+   "reason": "the thrust estimate is a function of the estimated wind speed: its bias is passed on to the thrust."
+  },
+  {
+   "from": "OVTASK-155",
+   "to": "OVTASK-112",
+   "reason": "the speed limit table (SLP_RotSpdTbl) is indexed with the estimated wind speed."
+  },
+  {
+   "from": "OVTASK-155",
+   "to": "OVTASK-286",
+   "reason": "the monitor compares the measured wind speed with the estimate: the normal error band (RotPerfM_WindSpdError*) depends on the accuracy of the estimator."
+  },
+  {
+   "from": "OVTASK-153",
+   "to": "OVTASK-130",
+   "reason": "GILL is gain-scheduled with the normalised thrust estimate: its gains are only valid if the thrust estimate is correct at the gust conditions."
+  },
+  {
+   "from": "OVTASK-142",
+   "to": "OVTASK-278",
+   "reason": "the low-power detection compares the produced power with a percentage of the expected power: the margin (LPDC_*PercentOfPwrCrv) must cover the error of the expected power."
+  },
+  {
+   "from": "OVTASK-307",
+   "to": "OVTASK-308",
+   "reason": "the rated power (PwrDesign) is the end point of the speed-power curve."
+  },
+  {
+   "from": "OVTASK-307",
+   "to": "OVTASK-140",
+   "reason": "the rated power sets where the opti-pitch curve ends and pitch regulation starts."
+  },
+  {
+   "from": "OVTASK-307",
+   "to": "OVTASK-125",
+   "reason": "the rated point (power and speed) is where the speed-pitch loop starts; the gain schedule is built from there to cut-out."
+  },
+  {
+   "from": "OVTASK-307",
+   "to": "OVTASK-141",
+   "reason": "boost levels and conditions are defined relative to the rated power and speed."
+  },
+  {
+   "from": "OVTASK-308",
+   "to": "OVTASK-159",
+   "reason": "the speed-power curve is the trajectory the speed-power loop follows in partial load: its slope sets the loop gain needed and the torque the drivetrain sees."
+  },
+  {
+   "from": "OVTASK-308",
+   "to": "OVTASK-140",
+   "reason": "the curve sets the tip-speed ratio at each wind speed, and the optimal pitch is defined for that tip-speed ratio: curve and opti-pitch are designed together."
+  },
+  {
+   "from": "OVTASK-308",
+   "to": "OVTASK-115",
+   "reason": "the scaling of the speed-power curve at start-up is applied to this curve."
+  },
+  {
+   "from": "OVTASK-308",
+   "to": "OVTASK-162",
+   "reason": "the speed window avoided by RSA lies on the curve: the power levels at the window edges, and so the time to cross the window, depend on the curve."
+  },
+  {
+   "from": "OVTASK-308",
+   "to": "OVTASK-112",
+   "reason": "the speed limited by power is a cut of the speed-power curve."
+  },
+  {
+   "from": "OVTASK-140",
+   "to": "OVTASK-138",
+   "reason": "the pitch-limit-by-wind offsets (PLBW_Pit1 / 2) are added to the opti-pitch curve: a new curve changes the resulting minimum pitch and thrust."
+  },
+  {
+   "from": "OVTASK-140",
+   "to": "OVTASK-157",
+   "reason": "the curtailed opti-pitch is derived from the same pitch tables; both must be consistent at the transition."
+  },
+  {
+   "from": "OVTASK-140",
+   "to": "OVTASK-142",
+   "reason": "the running power curve of the estimator is computed with the opti-pitch curve."
+  },
+  {
+   "from": "OVTASK-140",
+   "to": "OVTASK-152",
+   "reason": "the ACS pitch offsets (ACS_PitTbl_*) are added to the opti-pitch curve: the load reduction per offset depends on the pitch it starts from."
+  },
+  {
+   "from": "OVTASK-140",
+   "to": "OVTASK-125",
+   "reason": "the pitch at rated is the first point of the gain schedule: the aerodynamic sensitivity at the start of full load depends on it."
+  },
+  {
+   "from": "OVTASK-156",
+   "to": "OVTASK-157",
+   "reason": "the local power / speed limits (LocalPwrLimOEM, LocalRotSpdLimOEM) define the curtailed operating points for which the curtailed opti-pitch is designed."
+  },
+  {
+   "from": "OVTASK-138",
+   "to": "OVTASK-127",
+   "reason": "the minimum pitch at high wind reduces the thrust and the flapwise moment: BLL thresholds and gain act on the extremes left after this offset."
+  },
+  {
+   "from": "OVTASK-138",
+   "to": "OVTASK-130",
+   "reason": "the minimum pitch at high wind sets the flapwise load from which a gust starts: the gust load GILL must remove, and so its thresholds and gains, depend on this offset."
+  },
+  {
+   "from": "OVTASK-138",
+   "to": "OVTASK-141",
+   "reason": "the boost pitch offsets (PB_*_PitMinOff) are defined relative to the minimum pitch."
+  },
+  {
+   "from": "OVTASK-138",
+   "to": "OVTASK-160",
+   "reason": "the gap to the minimum pitch (FPSM_*_PitGapToMinPit) that decides the full-power state is measured from this minimum pitch."
+  },
+  {
+   "from": "OVTASK-116",
+   "to": "OVTASK-328",
+   "reason": "the start pitch angle and the kick-start speeds of the operation state machine together define the aerodynamic torque and the time to reach the connection speed at start-up."
+  },
+  {
+   "from": "OVTASK-328",
+   "to": "OVTASK-330",
+   "reason": "the cut-out speed and stop conditions (CutOut_RotSpd) and the stop power ramps (CutOut_*) act in the same stop: the ramp time must suit the speed at which the stop starts."
+  },
+  {
+   "from": "OVTASK-132",
+   "to": "OVTASK-122",
+   "reason": "the pitch actuator is inside the speed loop: its bandwidth, deadband and gain schedule (PSC_Kp, Ki, KpDeadband, filters) add phase lag at the speed-loop crossover and limit the PI gains that keep a stability margin."
+  },
+  {
+   "from": "OVTASK-132",
+   "to": "OVTASK-133",
+   "reason": "IPC commands 1P / 2P cyclic pitch: the actuator must follow at those frequencies, and its phase lag there sets the phase compensation and gain of IPC."
+  },
+  {
+   "from": "OVTASK-132",
+   "to": "OVTASK-128",
+   "reason": "TTCC compensates the time the actuator needs to pitch out before the tower passage (TTCC_DelayPit): a slower or faster actuator changes that delay."
+  },
+  {
+   "from": "OVTASK-296",
+   "to": "OVTASK-122",
+   "reason": "the maximum pitch-reference rate and deadband (SpdPit_PitRefMaxRate, PitRefDeadband) bound what the speed loop can command: a rate limit hit in gusts or grid faults saturates the loop (larger speed peaks); the deadband reduces pitch activity but adds a dead zone in the loop."
+  },
+  {
+   "from": "OVTASK-296",
+   "to": "OVTASK-133",
+   "reason": "the same rate limit applies to collective plus cyclic pitch: it bounds the IPC amplitude that can be added at high collective activity."
+  },
+  {
+   "from": "OVTASK-131",
+   "to": "OVTASK-122",
+   "reason": "the general pitch-rate limits (SpdPit_MaxPitRefRatePos / Neg) bound the pitch rate of the speed loop: when they are reached the loop saturates and speed peaks grow."
+  },
+  {
+   "from": "OVTASK-131",
+   "to": "OVTASK-139",
+   "reason": "TAL reduces the positive pitch-rate limit (SpdPit_MaxPitRefRatePosLoadRed): its effect is relative to the general limit."
+  },
+  {
+   "from": "OVTASK-131",
+   "to": "OVTASK-123",
+   "reason": "the pitch rates in stops and at high speed error set how fast the rotor is braked aerodynamically, and so the overspeed peaks the limits must accept."
+  },
+  {
+   "from": "OVTASK-121",
+   "to": "OVTASK-122",
+   "reason": "the phase lag of the notch, low-pass and lead filters at the speed-loop crossover sets the phase margin left for the PI: changing the filters (1ES-3ES, 3P, 2T, lead) requires re-checking Kp and Ti."
+  },
+  {
+   "from": "OVTASK-121",
+   "to": "OVTASK-159",
+   "reason": "the phase lag of the speed filters at the crossover of the speed-power PI in partial load limits the gain that keeps a stability margin: changing the filters requires re-checking the PI gains."
+  },
+  {
+   "from": "OVTASK-125",
+   "to": "OVTASK-122",
+   "reason": "the PI is tuned at a reference operating point and the schedule extends it to the full-load range: a change of the schedule changes the loop gain and margins in the rest of the range, and the reverse."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-125",
+   "reason": "the schedule is relative to the reference gains Kp / Ti: changing them changes the gain at every scheduled point."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-159",
+   "reason": "near rated both loops are active around the transition: their bandwidths and the speed shift between their references decide whether they hand over smoothly or fight each other."
+  },
+  {
+   "from": "OVTASK-159",
+   "to": "OVTASK-122",
+   "reason": "the speed-power loop bandwidth at rated sets the speed excursions the speed-pitch loop meets at the transition from partial to full load."
+  },
+  {
+   "from": "OVTASK-163",
+   "to": "OVTASK-122",
+   "reason": "the speed shift between the pitch and power speed references (SpdShift_*) sets how far the rotor speed must rise before pitch acts: it changes the speed excursions around rated."
+  },
+  {
+   "from": "OVTASK-163",
+   "to": "OVTASK-159",
+   "reason": "the speed shift between the pitch and power speed references (SpdShift_*) decides at which speed torque stops increasing and pitch takes over: it changes the speed-power loop behaviour near rated."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-127",
+   "reason": "the extreme flapwise moments in gusts depend on how fast the speed loop pitches out: BLL thresholds and gain are set on the extremes left after the speed loop, so a new PI tuning requires re-checking BLL."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-130",
+   "reason": "the gust load left after the speed-loop response is what GILL has to remove: a new PI tuning changes the gust extremes and requires re-checking the GILL thresholds and gains."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-139",
+   "reason": "the tower fore-aft motion that TAL reacts to is driven by the thrust changes the speed loop makes: a faster loop excites or damps the tower 1st fore-aft mode differently, so the TAL activation levels must be re-set."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-152",
+   "reason": "the tower and blade load levels ACS reacts to are set by the speed-loop response: the escalation thresholds must be set on the final loop."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-136",
+   "reason": "the collective pitch activity of the speed loop is the main source of pitch bearing damage at high wind: the PDA activation thresholds (pitch speed, bearing moment) depend on it."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-123",
+   "reason": "the overspeed peaks in gusts and grid faults depend on the loop bandwidth: the overspeed limits need a margin above the peaks of the final tuning, or they alarm (too low) or protect late (too high)."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-162",
+   "reason": "RSA moves the speed-pitch reference and loop gain to cross the resonance window; its activation and mode-switch times (RSA_SpdPitCtrlActivationTime, RSA_TimePitModeSwitch) assume the speed-loop response, so they must be re-checked when the loop changes."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-160",
+   "reason": "the pitch fluctuations around the minimum pitch near rated, set by the loop, decide whether the full-power state toggles: the gap to minimum pitch and the times (FPSM_*) are set for them."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-310",
+   "reason": "the normal tower fore-aft acceleration level comes from the speed-loop response: the vibration limits must stay above it with margin."
+  },
+  {
+   "from": "OVTASK-122",
+   "to": "OVTASK-301",
+   "reason": "after a grid fault the speed loop must stop the acceleration: the post-fault gain reduction and its time window (GFRT_Post_*SpdPit*) scale the tuned PI gains."
+  },
+  {
+   "from": "OVTASK-301",
+   "to": "OVTASK-122",
+   "reason": "the speed-pitch gain scaling during and after a grid fault (GFRT_Post_*SpdPit*) changes the effective loop gain the PI was tuned for, and so the speed recovery after the fault."
+  },
+  {
+   "from": "OVTASK-113",
+   "to": "OVTASK-123",
+   "reason": "the pitch feed-forward on power-reference changes and grid faults (SpdPit_DeltaPwrToPitFFGain, SpdPit_GFRT_*FF) decides how much speed rise the faults cause: the overspeed limits must cover the remaining peaks."
+  },
+  {
+   "from": "OVTASK-301",
+   "to": "OVTASK-113",
+   "reason": "the grid-fault feed-forward is triggered and timed by the ride-through states (GFRT_*): the feed-forward gains are set for that timing."
+  },
+  {
+   "from": "OVTASK-124",
+   "to": "OVTASK-123",
+   "reason": "the High Speed Gain (SpdPit_HSG_*) raises the loop gain near the speed limits: it sets the peak speed the overspeed limits have to accept."
+  },
+  {
+   "from": "OVTASK-165",
+   "to": "OVTASK-124",
+   "reason": "the speed limited by the collective pitch (flutter boundary) moves the speed limit near which the High Speed Gain acts."
+  },
+  {
+   "from": "OVTASK-154",
+   "to": "OVTASK-125",
+   "reason": "the high-wind curtailment adds operating points (reduced speed and power at high pitch) that the gain schedule must cover with margin."
+  },
+  {
+   "from": "OVTASK-154",
+   "to": "OVTASK-290",
+   "reason": "the wind limits for stop and restart (WL_High_*) must be consistent with the HWO cut-out window (HWO_*Cutout*, WindSpdCurtWinWidth): otherwise the turbine stops before or after HWO has curtailed."
+  },
+  {
+   "from": "OVTASK-154",
+   "to": "OVTASK-123",
+   "reason": "the curtailed speed references at high wind change the reference against which the relative overspeed limits are set."
+  },
+  {
+   "from": "OVTASK-159",
+   "to": "OVTASK-161",
+   "reason": "the gain schedule is relative to the speed-power PI gains: changing Kp changes the gain at every scheduled speed."
+  },
+  {
+   "from": "OVTASK-161",
+   "to": "OVTASK-159",
+   "reason": "the gain schedule sets the effective loop gain of the speed-power PI over the partial-load speed range: changing it changes the loop margins at every speed."
+  },
+  {
+   "from": "OVTASK-159",
+   "to": "OVTASK-162",
+   "reason": "in partial load the speed-power loop crosses the RSA window: its bandwidth and power rate limits set the crossing time and the power drop RSA_MinPwrReq must allow."
+  },
+  {
+   "from": "OVTASK-143",
+   "to": "OVTASK-159",
+   "reason": "the power envelope bounds the power reference the speed-power loop can command: power headroom and rates change the loop behaviour at the limits."
+  },
+  {
+   "from": "OVTASK-292",
+   "to": "OVTASK-143",
+   "reason": "the power envelope reserves headroom for the damping power of ADTD2 (DynPwrEnv_ADTD*): the reserve is sized from the damping power the tuned ADTD2 needs."
+  },
+  {
+   "from": "OVTASK-148",
+   "to": "OVTASK-143",
+   "reason": "the power envelope reserves headroom for the damping power of the side-side tower damper (ATD_X_MaxPwr and the ATD power estimate in the envelope): the reserve is sized from the power the tuned damper needs."
+  },
+  {
+   "from": "OVTASK-292",
+   "to": "OVTASK-146",
+   "reason": "the residual drivetrain oscillation after damping sets the normal level the oscillation monitor sees: its limits (DTOM_Str*_Lim) are set above that level."
+  },
+  {
+   "from": "OVTASK-145",
+   "to": "OVTASK-143",
+   "reason": "when the legacy damper is the active one, its power saturation (ADTD_PwrSat) is the damping power the envelope must reserve."
+  },
+  {
+   "from": "OVTASK-145",
+   "to": "OVTASK-146",
+   "reason": "when the legacy damper is the active one, the residual drivetrain oscillation after damping sets the normal level the oscillation monitor sees."
+  },
+  {
+   "from": "OVTASK-292",
+   "to": "OVTASK-301",
+   "reason": "a grid fault excites the drivetrain mode; the damper gain during and after the fault (ADTD2_GainFactGFRT, GFRT_Post_ADTD2AccThres) and the post-fault power ramps are tuned together."
+  },
+  {
+   "from": "OVTASK-301",
+   "to": "OVTASK-292",
+   "reason": "the post-fault power recovery (GFRT_Post_* power limits and ramps) decides how much the drivetrain mode is excited after a grid fault, and so how much the drivetrain damper must act."
+  },
+  {
+   "from": "OVTASK-133",
+   "to": "OVTASK-128",
+   "reason": "IPC reduces the 1P flapwise and tilt loads and changes the blade deflection at the tower passage: the TTCC load thresholds and pitch offset are set with IPC active."
+  },
+  {
+   "from": "OVTASK-133",
+   "to": "OVTASK-136",
+   "reason": "IPC is the largest source of pitch travel and bearing damage: the PDA activation and attenuation are tuned for the IPC amplitude."
+  },
+  {
+   "from": "OVTASK-133",
+   "to": "OVTASK-129",
+   "reason": "the safe-mode derating when IPC is unavailable (SafeMode_IPC_*) must compensate the load reduction the tuned IPC gives."
+  },
+  {
+   "from": "OVTASK-133",
+   "to": "OVTASK-135",
+   "reason": "the IPC pitch amplitudes allowed per state (FuncSche_IPCAllowedPitAmp*) are set from the amplitude the tuned IPC needs."
+  },
+  {
+   "from": "OVTASK-128",
+   "to": "OVTASK-136",
+   "reason": "TTCC pitch offsets add pitch travel per revolution in the tower passage: PDA must account for them."
+  },
+  {
+   "from": "OVTASK-128",
+   "to": "OVTASK-135",
+   "reason": "the maximum TTCC offset (TTCC_PitOffsetMax) in the scheduler bounds the TTCC action."
+  },
+  {
+   "from": "OVTASK-127",
+   "to": "OVTASK-130",
+   "reason": "BLL and GILL both raise the minimum pitch against high flapwise loads: their thresholds and gains overlap and are tuned together so that one does not hide or double the other."
+  },
+  {
+   "from": "OVTASK-130",
+   "to": "OVTASK-127",
+   "reason": "BLL and GILL both raise the minimum pitch against high flapwise loads: their thresholds and gains overlap and are tuned together so that one does not hide or double the other."
+  },
+  {
+   "from": "OVTASK-127",
+   "to": "OVTASK-129",
+   "reason": "the safe-mode derating when BLL / GILL are unavailable (SafeMode_BLLandGILL_*) must compensate their load reduction."
+  },
+  {
+   "from": "OVTASK-130",
+   "to": "OVTASK-129",
+   "reason": "the safe-mode derating when BLL / GILL are unavailable (SafeMode_BLLandGILL_*) must compensate the load reduction the tuned GILL gives."
+  },
+  {
+   "from": "OVTASK-127",
+   "to": "OVTASK-135",
+   "reason": "the priority between BLL and PDA (FuncSche_BLLPDA_PrioritizationMode) decides which pitch offset wins when both act."
+  },
+  {
+   "from": "OVTASK-130",
+   "to": "OVTASK-135",
+   "reason": "the priority between GILL and PDA (FuncSche_GILLPDA_PrioritizationMode) decides which pitch offset wins when both act."
+  },
+  {
+   "from": "OVTASK-136",
+   "to": "OVTASK-135",
+   "reason": "the PDA activation level in operation (FuncSche_PDAActivationLevelOperat) and its priority against BLL / GILL depend on how much pitch travel PDA removes."
+  },
+  {
+   "from": "OVTASK-139",
+   "to": "OVTASK-123",
+   "reason": "TAL slows the pitch-out when the tower accelerates, also in stops: slower pitch-out gives higher speed peaks, which the overspeed limits must accept."
+  },
+  {
+   "from": "OVTASK-139",
+   "to": "OVTASK-310",
+   "reason": "TAL limits the tower acceleration: the vibration-monitor limits must sit above the TAL activation levels so that TAL acts before the monitor stops the turbine."
+  },
+  {
+   "from": "OVTASK-139",
+   "to": "OVTASK-152",
+   "reason": "TAL and ACS both react to tower acceleration: the ACS escalation levels are set above the TAL action."
+  },
+  {
+   "from": "OVTASK-141",
+   "to": "OVTASK-152",
+   "reason": "boost raises power and loads: ACS must curtail correctly in boosted operation."
+  },
+  {
+   "from": "OVTASK-141",
+   "to": "OVTASK-143",
+   "reason": "the boosted power level must fit inside the power envelope and its headroom."
+  },
+  {
+   "from": "OVTASK-141",
+   "to": "OVTASK-160",
+   "reason": "the full-power state uses gaps to minimum pitch per boost type (FPSM_BoostTyp*_PitGapToMinPit): they are set for the boost pitch offsets."
+  },
+  {
+   "from": "OVTASK-143",
+   "to": "OVTASK-152",
+   "reason": "the power envelope limits the power ACS starts from when it curtails: the load reduction per curtailment level depends on it."
+  },
+  {
+   "from": "OVTASK-123",
+   "to": "OVTASK-107",
+   "reason": "the safety-system overspeed limits must sit above the controller limits, with margin, so that the controller protection acts first."
+  },
+  {
+   "from": "OVTASK-158",
+   "to": "OVTASK-278",
+   "reason": "operation with ice lowers the power curve on purpose (de-icing / anti-icing modes): the low-power thresholds per mode (LPDC_OWI_*, LPDC_AntiIce_*) are set for that power loss."
+  },
+  {
+   "from": "OVTASK-158",
+   "to": "OVTASK-286",
+   "reason": "operation with ice lowers the power curve on purpose (de-icing / anti-icing modes): the wind speed error accepted per ice mode (RotPerfM_WindSpdError*Ice*) follows the performance loss of the iced rotor in each mode."
+  },
+  {
+   "from": "OVTASK-278",
+   "to": "OVTASK-277",
+   "reason": "aerodynamic ice detection uses the low-power detection: its threshold sets how early ice is detected."
+  },
+  {
+   "from": "OVTASK-277",
+   "to": "OVTASK-281",
+   "reason": "the no-cut-in decision with ice uses the ice detector status: its sensitivity decides when the turbine may not start."
   }
  ]
 }

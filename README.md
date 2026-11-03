@@ -42,14 +42,17 @@ Nothing else is needed. No Python is needed on the PC that runs the `.exe`.
      reviewed.
    - **Load cases of the project:** for each relevant DLC, the load cases of the project simulation that match it, or
      "not simulated". Click one to see its set-up. With more simulations loaded, each one is listed.
-   - **In the model:** who uses the outputs of the function and its inputs, grouped by function, with the role of each
-     signal inside the consumer: *main*, *scheduling / auxiliary* (notch frequencies, gain scheduling, selectors...),
-     *event data* (alarms, event logs). Hover a signal for the blocks that use it; click a function to navigate.
+   - **Highly affected functionalities / Highly affected by** are *tuning couplings*, not signal links: A → B means that
+     changing the tunable (mainly WTGType-dependent) parameters of A requires re-tuning or re-checking B. Each coupling
+     gives the physical reason and the parameters involved.
    - **Type-dependent parameters:** how many depend on the compared type selection and which values differ between A and B.
    - **Copy for Jira** copies the table as Jira wiki markup.
    - When a function has several tuning tasks (e.g. the Speed-Pitch Controller), pick one in **Tuning task**. Tasks that
      are not tied to one Simulink function are listed at the end.
-8. **Load cases (DLCs)**: the same window as SimStatsPlotter. It lists the load cases of a simulation (wind, speeds,
+8. **Graph: signal links / tuning couplings** (above the graph): *signal links* is the TDI producer / consumer graph;
+   *tuning couplings* draws the couplings of the overview: left, the functions whose tuning highly affects this one;
+   right, the functions whose tuning must be repeated or re-checked when this one changes. Hover an arrow for the reason.
+9. **Load cases (DLCs)**: the same window as SimStatsPlotter. It lists the load cases of a simulation (wind, speeds,
    number of simulations, PSF, ULS/FLS use, events), opens the card of each load case, and compares simulations: new,
    removed and changed cases, and the template differences.
 

@@ -21,6 +21,9 @@ overview table, without gates) and the **load cases (DLCs)** of simulation folde
   3. the CoPaD parameter-value export `parVal<version>.csv`.
 - **Plus, optional, simulation folders** (user, 03-Nov-2026): read only, the first is the project simulation whose DLCs
   feed the tuning overview. The tuning knowledge base `tuning_kb.json` ships inside the tool (it is not an input).
+- **"Highly affected functionalities / by" = tuning couplings, never signal links** (user, 03-Nov-2026): A → B when
+  changing the tunable (mainly WTGType-dependent) parameters of A requires re-tuning or re-checking B, with the physical
+  reason. Signal links stay in the signal graph only; the tuning-coupling graph is a complementary view.
 - **Tuning overview content:** physics, not workflows; no run or seed counts; no tuning gates; no platform names in
   reasons. Dependencies are checked inside the slx (signal-use role), never assumed from names.
 - **The PLANC repo is READ ONLY.** Never write to it and never run git commands in it.
@@ -36,7 +39,7 @@ overview table, without gates) and the **load cases (DLCs)** of simulation folde
 | `planc_model.py` | Scanner. `build(ctrl, cd, copad, progress)` returns the model dict. It can also run as a CLI (`python planc_model.py <Controller> --cd <pdf> --csv <csv> --out model.json`). |
 | `planc_explorer.py` | Tkinter UI, the `Explorer` class. `--build` does a headless rebuild from the saved config and writes `build.log`. Holds `__version__`. |
 | `overview.py` | Tuning overview: `tasks_for(comp)`, `dlc_items` / `match_dlcs` / `dlc_rows` (KB DLC codes → simulation folders), `links` (model links with role), `type_params`, `jira_markup`. |
-| `tuning_kb.json` | Tuning knowledge base: 76 tasks `{key, name, comp, cd, subarea, scope, kpi, dlcs, affects, affected_by, risk, workflow}` built from the SG5.2-170-HCF tuning sheets (gates and project-only sentences removed; `workflow` is not shown). Markup: `**bold**`, `- ` bullets, `[P]` = proposed. `comp` is None for 6 tasks. Bundled in the exe (`--add-data`). |
+| `tuning_kb.json` | Tuning knowledge base: 76 tasks `{key, name, comp, cd, subarea, scope, kpi, dlcs, affects, affected_by, risk, workflow}` built from the SG5.2-170-HCF tuning sheets (gates and project-only sentences removed; `workflow` is not shown), plus `couplings` = `[{from, to, reason}]` (113 tuning couplings). `affects` / `affected_by` are generated from `couplings` by the project's `tools/tuning_sheets/coupling.py` (single source: edit there, then regenerate the Word document and this file). Markup: `**bold**`, `- ` bullets, `[P]` = proposed. `comp` is None for 6 tasks. Bundled in the exe (`--add-data`). |
 | `slx_trace.py` | `Slx(path).first_users(inport)`: the first blocks that use a root inport inside a component (through Goto/From, subsystems and library links). |
 | `dlcsetup.py`, `dlcview.py`, `screen_fit.py` | Copied from `D:\PYTHON_functions_epm\SimStatsPlotter` (keep in sync): load-case reader and the Load cases window. |
 | `dlc_inputs.py`, `dlc_viewutil.py` | The numpy-free parts of SimStatsPlotter `extremes.py` / `loadcalc.py` (ULS/FLS input readers) and `viewutil.py` (`help_layout`, `tree`). |
@@ -123,6 +126,8 @@ outside_model_params, cd.
   - Signals: double-click jumps to the peer.
   - Type selections.
   - Description: model data plus CD section, chapter, page and intro.
+- **Graph mode** (`self.gmode`): `draw` = signal links, `draw_tuning` = tuning couplings from `overview.couplings(comp)`
+  (grouped by peer; tasks without a Simulink function are grey boxes; hover = reasons).
 - **Tuning overview** (first tab, and a window when the centre box is clicked): `ov_frame` / `fill_overview` /
   `render_overview`. Task combobox: tasks of the function, then the tasks not tied to one function. DLC names are links
   to a card (`dlc_card`); function names navigate. "Copy for Jira" = `overview.jira_markup`.

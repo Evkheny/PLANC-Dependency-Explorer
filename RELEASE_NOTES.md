@@ -1,5 +1,18 @@
 # PLANC Dependency Explorer - Release notes
 
+## v1.2.0 (03-Nov-2026)
+
+### Changed
+- **Highly affected functionalities / Highly affected by** in the tuning overview are now *tuning couplings*: A → B
+  means that changing the tunable (mainly WTGType-dependent) parameters of A requires re-tuning or re-checking B. Each
+  coupling gives the physical reason and the parameters involved (113 couplings). Before, these rows listed signal
+  links, which do not say whether the tuning of one function depends on another.
+- The signal-link lists were removed from the overview; signal links remain in the graph.
+
+### New
+- **Graph: tuning couplings** (selector above the graph): left, the functions whose tuning highly affects the selected
+  one; right, the functions whose tuning must be repeated or re-checked when it changes. Hover an arrow for the reason.
+
 ## v1.1.0 (03-Nov-2026)
 
 ### New

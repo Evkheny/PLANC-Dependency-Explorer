@@ -6,7 +6,7 @@ parameters, type selections, owners and parameter values per type. Built only fr
 Optional: simulation folder(s) (only read): their load cases (DLCs) feed the tuning overview of each function and can be
 viewed and compared in the Load cases window.
 Run: python planc_explorer.py   (or the packaged PLANC_Dependency_Explorer.exe)"""
-import json, os, sys, threading, traceback, collections
+import json, os, sys, threading, traceback, collections, textwrap
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
@@ -17,7 +17,7 @@ import overview  # noqa: E402
 import dlcsetup  # noqa: E402
 import dlcview  # noqa: E402
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 APP = 'PLANC Dependency Explorer'
 DATA = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'PLANC_Dependency_Explorer')
 CFG = os.path.join(DATA, 'config.json')
@@ -184,8 +184,15 @@ class Explorer(tk.Tk):
         ttk.Button(nav, text='Forward >', command=lambda: self.go_hist(1)).pack(side='left', padx=4)
         self.title_lbl = ttk.Label(nav, text='', font=('Segoe UI', 12, 'bold'), foreground=ACCENT)
         self.title_lbl.pack(side='left', padx=10)
+        nav2 = ttk.Frame(mid)
+        nav2.pack(fill='x', pady=(2, 0))
+        ttk.Label(nav2, text='Graph:').pack(side='left')
+        self.gmode = tk.StringVar(value='signals')
+        for v, lab in (('signals', 'signal links'), ('tuning', 'tuning couplings')):
+            ttk.Radiobutton(nav2, text=lab, value=v, variable=self.gmode,
+                            command=lambda: self.show(self.sel, False)).pack(side='left', padx=4)
         self.ext = tk.BooleanVar(value=False)
-        ttk.Checkbutton(nav, text='show platform (STC1) inputs / unused outputs', variable=self.ext,
+        ttk.Checkbutton(nav2, text='show platform (STC1) inputs / unused outputs', variable=self.ext,
                         command=lambda: self.show(self.sel, False)).pack(side='right')
         cf = ttk.Frame(mid)
         cf.pack(fill='both', expand=True)
@@ -433,7 +440,10 @@ class Explorer(tk.Tk):
             self.tree.see(n)
         sec = c.get('cd_section')
         self.title_lbl.configure(text=f"{n}  ({c['short']})" + (f"   CD {sec}" if sec else ''))
-        self.draw(n)
+        if self.gmode.get() == 'tuning':
+            self.draw_tuning(n)
+        else:
+            self.draw(n)
         if details:
             self.details(n)
 
@@ -497,6 +507,59 @@ class Explorer(tk.Tk):
         cv.yview_moveto(max(0.0, (cy - vis / 2) / max(H, vis)))
         cv.create_text(W / 2, H - 14, text='Click a box to navigate (centre box: tuning overview) - hover an arrow for all its signals - colours = subarea - '
                        'orange border = parameters differ between A and B', fill=MUTED, font=('Segoe UI', 8))
+
+    def draw_tuning(self, n):
+        """Tuning couplings (complement of the signal graph): left = functions whose tuning highly affects this one,
+        right = functions whose tuning must be repeated or re-checked when this one changes. Hover = physical reason."""
+        cv = self.cv
+        cv.delete('all')
+        C = self.M['components']
+        W = max(cv.winfo_width(), 700)
+        ins, outs = overview.couplings(n)
+        T = {t['key']: t['name'] for t in overview.all_tasks()}
+        rowh, top = 46, 60
+        nrows = max(len(ins), len(outs), 1)
+        H = top + nrows * rowh + 40
+        cv.configure(scrollregion=(0, 0, W, max(H, cv.winfo_height())))
+        bw = min(240, int(W * 0.22))
+        xl, xr, xc = 20, W - 20 - bw, W / 2
+        cy = top + (nrows * rowh) / 2
+        cw, ch = min(280, int(W * 0.24)), 132
+        self.box(xc - cw / 2, cy - ch / 2, cw, ch, n, C[n], centre=True)
+        cv.create_text(xl, 25, text=f'TUNING HIGHLY AFFECTED BY  ({len(ins)})', fill=MUTED, font=('Segoe UI', 9, 'bold'),
+                       anchor='w')
+        cv.create_text(xr + bw, 25, text=f'TUNING HIGHLY AFFECTS  ({len(outs)})', fill=MUTED, font=('Segoe UI', 9, 'bold'),
+                       anchor='e')
+
+        def tip(items):
+            return '\n\n'.join(f'{T.get(a, a)} -> {T.get(b, b)}:\n' + textwrap.fill(r, 90) for a, b, r in items)
+
+        def peer_box(x, y, pid, label, comp):
+            if comp in C:
+                self.box(x, y - 17, bw, 34, comp, C[comp])
+            else:                                       # task without a Simulink function (or outside the model)
+                cv.create_rectangle(x, y - 17, x + bw, y + 17, fill='#ECEFF1', outline='#90A4AE')
+                cv.create_text(x + 8, y, text=label, anchor='w', font=('Segoe UI', 9, 'bold'), fill=INK, width=bw - 12)
+        if not ins and not outs:
+            cv.create_text(W / 2, cy + ch / 2 + 30, text='No strong tuning coupling recorded for this function.', fill=MUTED,
+                           font=('Segoe UI', 10, 'italic'))
+        for i, (pid, label, comp, items) in enumerate(ins):
+            y = top + i * rowh + rowh / 2 + (nrows - len(ins)) * rowh / 2
+            peer_box(xl, y, pid, label, comp)
+            a = cv.create_line(xl + bw, y, xc - cw / 2, cy - ch / 2 + 12 + (ch - 24) * (i + 0.5) / max(len(ins), 1),
+                               arrow='last', fill='#7D3C98', width=2, smooth=True)
+            self.hover(a, tip(items))
+        for i, (pid, label, comp, items) in enumerate(outs):
+            y = top + i * rowh + rowh / 2 + (nrows - len(outs)) * rowh / 2
+            peer_box(xr, y, pid, label, comp)
+            a = cv.create_line(xc + cw / 2, cy - ch / 2 + 12 + (ch - 24) * (i + 0.5) / max(len(outs), 1), xr, y,
+                               arrow='last', fill='#B9770E', width=2, smooth=True)
+            self.hover(a, tip(items))
+        vis = max(cv.winfo_height(), 300)
+        cv.yview_moveto(max(0.0, (cy - vis / 2) / max(H, vis)))
+        cv.create_text(W / 2, H - 14, text='Tuning couplings (not signals): A -> B = changing the tunable parameters of A '
+                       'requires re-tuning or re-checking B. Hover an arrow for the physical reason; click a box to navigate.',
+                       fill=MUTED, font=('Segoe UI', 8), width=W - 20, justify='center')
 
     def box(self, x, y, w, h, name, c, centre=False):
         cv = self.cv
@@ -854,20 +917,10 @@ class Explorer(tk.Tk):
             self.render_dlcs(tx, task, sims)
             row('Highly affected functionalities')
             paras(task['affects'])
-        if tcomp in C:
-            inc, out = overview.links(M, tcomp)
-            if not task:
-                row('Outputs used by (model)')
-            tx.insert('end', 'In the model: who uses the outputs of ' + tcomp + ' and how (traced inside the consumer)\n', 'src')
-            self.render_links(tx, out)
-        if task:
             row('Highly affected by')
             paras(task['affected_by'])
-        if tcomp in C:
-            if not task:
-                row('Inputs from (model)')
-            tx.insert('end', 'In the model: inputs of ' + tcomp + ' and how they are used\n', 'src')
-            self.render_links(tx, inc)
+            tx.insert('end', 'Tuning couplings with the physical reason (not signal links). The signal links are in the graph; '
+                             '"Graph: tuning couplings" draws these couplings.\n', 'note')
         if task:
             row('Risk of not tuning')
             paras(task['risk'])

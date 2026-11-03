@@ -2,7 +2,7 @@ r"""UI smoke test with screenshots (uses the model saved in %APPDATA%\PLANC_Depe
 Usage: python tests/ui_smoke.py <out folder>   (needs pillow). Writes ui1.png (compare A/B, only A!=B, PitchTrajectoryTables),
 ui2.png (values-per-type popup), ui3.png (STC1-emulated function with outside-model parameters), ui4.png (Tuning overview
 tab of RotorSpeedFilter with the DLCs of the project simulation, if one is configured), ui5.png (overview window opened from
-the centre box) and ui6.png (Load cases window)."""
+the centre box) ui6.png (Load cases window) and ui7.png (graph of tuning couplings)."""
 import ctypes, ctypes.wintypes, os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -94,6 +94,14 @@ def s6():
 def s7():
     dw = [c for c in app.winfo_children() if str(c).startswith('.!toplevel')][-1]
     grab(dw, 'ui6.png')
+    dw.destroy()
+    app.gmode.set('tuning')
+    app.navigate('SpeedPitchController')
+    app.after(1500, s8)
+
+
+def s8():
+    grab(app, 'ui7.png')
     app.destroy()
 
 

@@ -28,6 +28,25 @@ def all_tasks():
     return kb()['tasks']
 
 
+# ------------------------------------------------------------------------------------------------ tuning couplings
+def couplings(comp):
+    """Tuning couplings of a Simulink component (all its tasks), grouped by peer.
+    Returns (incoming, outgoing): [(peer comp or task key, label, peer comp or None, [(from key, to key, reason)])].
+    A -> B = changing the tunable parameters of A requires re-tuning or re-checking B (physical reason given)."""
+    T = {t['key']: t for t in all_tasks()}
+    mine = {t['key'] for t in tasks_for(comp)}
+    inc, out = {}, {}
+    for e in kb().get('couplings', []):
+        a, b = e['from'], e['to']
+        for side, me, peer in ((out, a, b), (inc, b, a)):
+            if me in mine and peer not in mine:
+                pt = T.get(peer, {})
+                pid = pt.get('comp') or peer
+                label = pt.get('comp') or (pt.get('name', peer) + (f' ({peer})' if peer in T else ''))
+                side.setdefault(pid, [pid, label, pt.get('comp'), []])[3].append((a, b, e['reason']))
+    return [tuple(v) for v in inc.values()], [tuple(v) for v in out.values()]
+
+
 # ------------------------------------------------------------------------------------------------ DLC relevance
 _CODE = re.compile(r'(\d{1,2})\.(\d+|x)([a-z]{0,3})(?:/([a-z]))?')
 
