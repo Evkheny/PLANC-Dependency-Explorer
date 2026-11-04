@@ -3,10 +3,15 @@
 Read together with `CLAUDE.md`. Section 0 is the current state; then the timeline, decisions, reference numbers, domain
 knowledge and ideas.
 
-## 0. Current state (03-Nov-2026, evening)
-- **Version 1.2.0** (local commit, not pushed): "Highly affected functionalities / by" rewritten as tuning couplings with
-  the physical reason (113 couplings), model-link sections removed from the overview, new graph mode "tuning couplings".
-- **Version 1.1.0** (tagged locally by the user): tuning overview per function + load cases (DLCs) of simulation folders.
+## 0. Current state (04-Nov-2026)
+- **Version 1.2.0** pushed to GitHub with tag `v1.2.0`; zip `release\PLANC_Dependency_Explorer_v1.2.0.zip` ready; the
+  GitHub release itself is created by the user (web UI). Content: "Highly affected functionalities / by" rewritten as
+  tuning couplings with the physical reason (113 couplings), model-link sections removed from the overview, new graph
+  mode "tuning couplings".
+- **Version 1.1.0** released on GitHub: tuning overview per function + load cases (DLCs) of simulation folders.
+- **Keep in sync:** the couplings come from the SG5.2-170-HCF project file `tools/tuning_sheets/coupling.py`. After
+  editing it, regenerate the Word document (`build_sheets.py`) AND `tuning_kb.json` (`affects` / `affected_by` via
+  `coupling.fields`, `couplings` = EDGES), then rebuild the exe.
 - **Version 1.0.0** was released on GitHub on 02-Nov-2026.
 - **Repository:** the user's personal GitHub. The `.exe` goes in the release assets; company data is never committed.
 - **Open points:**

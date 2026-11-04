@@ -147,6 +147,9 @@ outside_model_params, cd.
   1. Headless build: `dist\PLANC_Dependency_Explorer.exe --build`, then read `%APPDATA%\PLANC_Dependency_Explorer\build.log`.
      It must start with `OK` and give the reference numbers in HISTORY.md for the same release.
   2. `python tests/ui_smoke.py <tmp>`, then look at the screenshots.
+- **Knowledge-base update** (couplings or sheet text changed in the project): regenerate `tuning_kb.json` from the
+  project's `tools/tuning_sheets` (`coupling.fields` for `affects` / `affected_by`, `couplings` = `coupling.EDGES`), check
+  that `kb['couplings']` equals `coupling.EDGES`, bump `version` in the json, rebuild the exe.
 - **Release:**
   1. Bump `__version__`.
   2. Commit and tag `vX.Y.Z`.
