@@ -2,7 +2,8 @@ r"""UI smoke test with screenshots (uses the model saved in %APPDATA%\PLANC_Depe
 Usage: python tests/ui_smoke.py <out folder>   (needs pillow). Writes ui1.png (compare A/B, only A!=B, PitchTrajectoryTables),
 ui2.png (values-per-type popup), ui3.png (STC1-emulated function with outside-model parameters), ui4.png (Tuning overview
 tab of RotorSpeedFilter with the DLCs of the project simulation, if one is configured), ui5.png (overview window opened from
-the centre box) ui6.png (Load cases window) and ui7.png (graph of tuning couplings)."""
+the centre box) ui6.png (Load cases window) and ui7.png (graph of tuning couplings), ui8.png (Load case view, DLC 1.4) and
+ui9.png (Load case view by load: tower fore-aft extreme)."""
 import ctypes, ctypes.wintypes, os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -102,6 +103,29 @@ def s7():
 
 def s8():
     grab(app, 'ui7.png')
+    app.gmode.set('signals')
+    import loadview
+    global lw
+    lw = loadview.LoadCaseWindow(app)
+    names = [i for g in lw.lst.get_children('') for i in lw.lst.get_children(g)]
+    pick = next((i for i in names if 'DLC14_' in i), names[0] if names else 'ALL')
+    lw.lst.selection_set(pick)
+    lw.lst.see(pick)
+    app.after(1500, s9)
+
+
+def s9():
+    grab(lw.win, 'ui8.png')
+    lw.lst.selection_set('ALL')
+    lw.comp.set('Tower fore-aft')
+    lw.kind.set('Extreme (ULS)')
+    lw.refresh()
+    lw.rank.selection_set('0')
+    app.after(1500, s10)
+
+
+def s10():
+    grab(lw.win, 'ui9.png')
     app.destroy()
 
 

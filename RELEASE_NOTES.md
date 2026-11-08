@@ -1,5 +1,23 @@
 # PLANC Dependency Explorer - Release notes
 
+## v1.3.0 (08-Nov-2026)
+
+### New
+- **Load case view** (toolbar): which control strategies affect a load case or a load, and which make most sense to
+  tune to reduce it.
+  - **By load case:** the DLC in the centre (use: extreme if it enters ULS, fatigue if it enters FLS; functions
+    disabled in that case) and an arrow from every functionality whose tuning affects it. Arrow colour and width =
+    relevance (High / Medium / Lower); each box tells the loads it acts on in that case (e.g. "Tower FA E, Blade flap E").
+    Functions disabled in the case are dashed.
+  - **By load:** pick a load group (tower fore-aft / side-side, blade flap / edge, pitch bearing, drivetrain, hub and
+    bearings, tip clearance, overspeed, AEP) and a type (extreme / fatigue) to see the functionalities that act on it
+    and in which load cases.
+  - **What to tune first:** ranking with the reason (why the load case matters for that tuning) and the mechanism (how
+    its tuning changes the load); double-click opens its tuning overview.
+  - The load cases and their use come from the project simulation when one is loaded; otherwise the DLC codes of the
+    knowledge base with the IEC default use.
+- Knowledge base: load effects per functionality (183), to be reviewed with the Loads team.
+
 ## v1.2.0 (03-Nov-2026)
 
 ### Changed

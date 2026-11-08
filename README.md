@@ -52,7 +52,21 @@ Nothing else is needed. No Python is needed on the PC that runs the `.exe`.
 8. **Graph: signal links / tuning couplings** (above the graph): *signal links* is the TDI producer / consumer graph;
    *tuning couplings* draws the couplings of the overview: left, the functions whose tuning highly affects this one;
    right, the functions whose tuning must be repeated or re-checked when this one changes. Hover an arrow for the reason.
-9. **Load cases (DLCs)**: the same window as SimStatsPlotter. It lists the load cases of a simulation (wind, speeds,
+9. **Load case view** (toolbar): which control strategies affect a load case or a load, and which make most sense to
+   tune to reduce it.
+   - **By load case:** pick a DLC (the project simulation's, or the DLC codes of the knowledge base). The DLC sits in
+     the centre with its use (extreme = in ULS, fatigue = in FLS) and the functions disabled in that case; every
+     functionality whose tuning affects it points at it. Arrow colour / width = relevance (High / Medium / Lower from
+     its tuning sheet); the box says which loads it acts on in that case (e.g. "Tower FA E, Blade flap E"); dashed =
+     disabled in the case.
+   - **By load:** pick "(all load cases) - by load" and a load group (Tower fore-aft, Blade flap, Pitch bearing,
+     Drivetrain, Hub / bearings, Clearance, Overspeed, AEP...) and type (extreme / fatigue).
+   - Filters: load group, load type, minimum relevance. Example: tower load rising in DLC 1.4 → pick DLC 1.4, Tower
+     fore-aft, Extreme.
+   - **What to tune first** (right): ranking by relevance, whether the reason names that load, direct vs indirect action
+     (estimators act through other functions) and monitors last (they protect, they do not reduce the load). Select a
+     row for the reason and the mechanism; double-click (or click a box) opens its tuning overview.
+10. **Load cases (DLCs)**: the same window as SimStatsPlotter. It lists the load cases of a simulation (wind, speeds,
    number of simulations, PSF, ULS/FLS use, events), opens the card of each load case, and compares simulations: new,
    removed and changed cases, and the template differences.
 
@@ -63,6 +77,7 @@ Settings, the model and the load-case cache (`dlccache`) are stored in `%APPDATA
 - `planc_model.py` is the scanner. It can also be run on its own: `python planc_model.py <Controller> --cd <pdf> --csv <csv> --out model.json`.
 - `planc_explorer.py` is the window (Tkinter).
 - `overview.py` builds the tuning overview from `tuning_kb.json`, the model and the load cases.
+- `loadview.py` is the Load case view (logic: `affecting`, `affecting_load`; window: `LoadCaseWindow`).
 - `dlcsetup.py`, `dlcview.py`, `dlc_inputs.py`, `dlc_viewutil.py`, `screen_fit.py` are copied from SimStatsPlotter (load
   cases; keep them in sync). `slx_trace.py` traces where a signal is used inside a consumer.
 - `build_exe.cmd` creates a venv, installs `pyinstaller`, `pymupdf` and `openpyxl`, and builds

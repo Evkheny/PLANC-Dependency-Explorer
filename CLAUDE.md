@@ -39,7 +39,8 @@ overview table, without gates) and the **load cases (DLCs)** of simulation folde
 | `planc_model.py` | Scanner. `build(ctrl, cd, copad, progress)` returns the model dict. It can also run as a CLI (`python planc_model.py <Controller> --cd <pdf> --csv <csv> --out model.json`). |
 | `planc_explorer.py` | Tkinter UI, the `Explorer` class. `--build` does a headless rebuild from the saved config and writes `build.log`. Holds `__version__`. |
 | `overview.py` | Tuning overview: `tasks_for(comp)`, `dlc_items` / `match_dlcs` / `dlc_rows` (KB DLC codes → simulation folders), `links` (model links with role), `type_params`, `jira_markup`. |
-| `tuning_kb.json` | Tuning knowledge base: 76 tasks `{key, name, comp, cd, subarea, scope, kpi, dlcs, affects, affected_by, risk, workflow}` built from the SG5.2-170-HCF tuning sheets (gates and project-only sentences removed; `workflow` is not shown), plus `couplings` = `[{from, to, reason}]` (113 tuning couplings). `affects` / `affected_by` are generated from `couplings` by the project's `tools/tuning_sheets/coupling.py` (single source: edit there, then regenerate the Word document and this file). Markup: `**bold**`, `- ` bullets, `[P]` = proposed. `comp` is None for 6 tasks. Bundled in the exe (`--add-data`). |
+| `tuning_kb.json` | Tuning knowledge base: 76 tasks `{key, name, comp, cd, subarea, scope, kpi, dlcs, affects, affected_by, risk, workflow}` built from the SG5.2-170-HCF tuning sheets (gates and project-only sentences removed; `workflow` is not shown), plus `couplings` = `[{from, to, reason}]` (113 tuning couplings), `effects` = `{key: [{comp, kind, why}]}` (183 load effects, kind E / F / EF), `components` (load groups), `keywords` (words that name a load group in a DLC reason) and `dlc_switch` (DLC set-up label → OVTASK of a function switched off in the case). `effects` / `components` / `keywords` / `dlc_switch` come from the project's `tools/tuning_sheets/load_effects.py`. `affects` / `affected_by` are generated from `couplings` by the project's `tools/tuning_sheets/coupling.py` (single source: edit there, then regenerate the Word document and this file). Markup: `**bold**`, `- ` bullets, `[P]` = proposed. `comp` is None for 6 tasks. Bundled in the exe (`--add-data`). |
+| `loadview.py` | Load case view: `affecting(code, setup, comp, kind)` (functionalities affecting a DLC, with level, reasons, load effects matching the DLC use E / F, disabled flag, score), `affecting_load(comp, kind)` (by load), `LoadCaseWindow` (DLC list, filters, diagram, ranking). |
 | `slx_trace.py` | `Slx(path).first_users(inport)`: the first blocks that use a root inport inside a component (through Goto/From, subsystems and library links). |
 | `dlcsetup.py`, `dlcview.py`, `screen_fit.py` | Copied from `D:\PYTHON_functions_epm\SimStatsPlotter` (keep in sync): load-case reader and the Load cases window. |
 | `dlc_inputs.py`, `dlc_viewutil.py` | The numpy-free parts of SimStatsPlotter `extremes.py` / `loadcalc.py` (ULS/FLS input readers) and `viewutil.py` (`help_layout`, `tree`). |
@@ -126,6 +127,11 @@ outside_model_params, cd.
   - Signals: double-click jumps to the peer.
   - Type selections.
   - Description: model data plus CD section, chapter, page and intro.
+- **Load case view** (`loadview.LoadCaseWindow`, toolbar button): DLC use from the simulation set-up (`setup.uls` /
+  `setup.fls`; IEC default by code when no simulation), functions disabled in the case from the 'Control functions' /
+  'Safety system' facts mapped with `dlc_switch`. DLC match: exact, `x` wildcard, and a code without letter matches its
+  lettered variants (`2.1` → 2.1g). Score = level (3 / 2 / 1) + 0.5 if the reason names the load + 0.5 if direct
+  (mechanism not starting "through") − 0.7 for monitors; by-load also + 0.1 per High DLC (max 5).
 - **Graph mode** (`self.gmode`): `draw` = signal links, `draw_tuning` = tuning couplings from `overview.couplings(comp)`
   (grouped by peer; tasks without a Simulink function are grey boxes; hover = reasons).
 - **Tuning overview** (first tab, and a window when the centre box is clicked): `ov_frame` / `fill_overview` /
@@ -147,6 +153,8 @@ outside_model_params, cd.
   1. Headless build: `dist\PLANC_Dependency_Explorer.exe --build`, then read `%APPDATA%\PLANC_Dependency_Explorer\build.log`.
      It must start with `OK` and give the reference numbers in HISTORY.md for the same release.
   2. `python tests/ui_smoke.py <tmp>`, then look at the screenshots.
+- **Load effects update:** edit `load_effects.py` in the project, run it (checks), export `effects`, `components`,
+  `keywords`, `dlc_switch` into `tuning_kb.json`, rebuild the exe.
 - **Knowledge-base update** (couplings or sheet text changed in the project): regenerate `tuning_kb.json` from the
   project's `tools/tuning_sheets` (`coupling.fields` for `affects` / `affected_by`, `couplings` = `coupling.EDGES`), check
   that `kb['couplings']` equals `coupling.EDGES`, bump `version` in the json, rebuild the exe.

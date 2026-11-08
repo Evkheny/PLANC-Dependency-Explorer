@@ -16,8 +16,9 @@ import planc_model  # noqa: E402
 import overview  # noqa: E402
 import dlcsetup  # noqa: E402
 import dlcview  # noqa: E402
+import loadview  # noqa: E402
 
-__version__ = '1.2.0'
+__version__ = '1.3.0'
 APP = 'PLANC Dependency Explorer'
 DATA = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'PLANC_Dependency_Explorer')
 CFG = os.path.join(DATA, 'config.json')
@@ -91,6 +92,7 @@ class Explorer(tk.Tk):
         self.src_btn.pack(side='left')
         ttk.Button(bar, text='Build model', style='Accent.TButton', command=self.rebuild).pack(side='left', padx=4)
         ttk.Button(bar, text='Load cases (DLCs)', command=self.open_dlcs).pack(side='left', padx=4)
+        ttk.Button(bar, text='Load case view', command=lambda: loadview.LoadCaseWindow(self)).pack(side='left', padx=4)
         ttk.Button(bar, text='Help', command=self.help).pack(side='left', padx=4)
         # compare bar: type selection + two type values
         cmp_ = ttk.Frame(bar)

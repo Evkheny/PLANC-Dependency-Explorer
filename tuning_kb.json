@@ -1,5 +1,5 @@
 {
- "version": "2026-11-03b",
+ "version": "2026-11-08",
  "note": "Tuning task overview knowledge base (Jira OVTASK overview rows, gates omitted). Curated by Turbine Control from the PLANC model, the Controller Description and CoPaD; text marked [P] is proposed and must be reviewed. Highly affected functionalities / by = tuning couplings (A -> B: changing the tunable parameters of A requires re-tuning or re-checking B), with the physical reason; not signal links.",
  "tasks": [
   {
@@ -3219,5 +3219,1157 @@
    "to": "OVTASK-281",
    "reason": "the no-cut-in decision with ice uses the ice detector status: its sensitivity decides when the turbine may not start."
   }
- ]
+ ],
+ "components": {
+  "TWR_FA": "Tower fore-aft",
+  "TWR_SS": "Tower side-side",
+  "BLD_FLAP": "Blade flap",
+  "BLD_EDGE": "Blade edge",
+  "PITCH": "Pitch bearing / actuator",
+  "DRV": "Drivetrain (main shaft, gearbox)",
+  "HUB": "Hub, main and yaw bearing (tilt / yaw)",
+  "CLR": "Tip-tower clearance",
+  "SPD": "Rotor speed / overspeed",
+  "AEP": "Power / AEP"
+ },
+ "keywords": {
+  "TWR_FA": [
+   "tower",
+   "fore-aft",
+   "thrust"
+  ],
+  "TWR_SS": [
+   "side-side"
+  ],
+  "BLD_FLAP": [
+   "flap",
+   "blade load",
+   "blade-root",
+   "blade root",
+   "blade extremes",
+   "blades"
+  ],
+  "BLD_EDGE": [
+   "edgewise",
+   "edge"
+  ],
+  "PITCH": [
+   "pitch bearing",
+   "pitch activity",
+   "pitch travel",
+   "actuator",
+   "pitch-rate",
+   "pitch rate"
+  ],
+  "DRV": [
+   "drivetrain",
+   "drive-train",
+   "torque",
+   "gearbox",
+   "shaft"
+  ],
+  "HUB": [
+   "tilt",
+   "yaw moment",
+   "hub",
+   "main bearing",
+   "yaw bearing",
+   "yaw error",
+   "misalignment"
+  ],
+  "CLR": [
+   "clearance",
+   "tip-tower",
+   "tip-to-tower"
+  ],
+  "SPD": [
+   "overspeed",
+   "speed peak",
+   "rotor speed",
+   "speed excursion",
+   "speed limit",
+   "accelerat"
+  ],
+  "AEP": [
+   "aep",
+   "power curve",
+   "production",
+   "derating"
+  ]
+ },
+ "effects": {
+  "OVTASK-120": [
+   {
+    "comp": "BLD_EDGE",
+    "kind": "F",
+    "why": "the estimated 1ES-3ES place the speed-filter notches: a wrong estimate lets edgewise content into the speed loop, which then excites the edgewise mode through pitch and torque."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "through the Rotor Speed Filter: edgewise content in the speed feedback becomes pitch activity."
+   }
+  ],
+  "OVTASK-121": [
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "3P, 6P and edgewise content left in the speed feedback becomes pitch activity and bearing damage."
+   },
+   {
+    "comp": "BLD_EDGE",
+    "kind": "F",
+    "why": "a 1ES-3ES notch off the mode feeds edgewise content back into pitch and torque (excitation)."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "the filter phase lag at the crossover limits the speed-loop gain: slower response in gusts (tower fore-aft extreme) and tower 2nd-mode content in the loop if the 2T notch is wrong."
+   },
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "residual ripple of the filtered speed goes into the torque reference in partial load."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "filter delay increases the speed peak in gusts and grid faults."
+   }
+  ],
+  "OVTASK-96": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "through every speed loop and the overspeed protection: noise or bias of the fused speed."
+   }
+  ],
+  "OVTASK-97": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "through every speed loop and the overspeed protection: delay and noise of the selected source."
+   }
+  ],
+  "OVTASK-334": [
+   {
+    "comp": "HUB",
+    "kind": "F",
+    "why": "through IPC: an azimuth phase error rotates the tilt / yaw correction, so IPC removes less (or adds) tilt / yaw and flap load."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "F",
+    "why": "through IPC: idem for the 1P flapwise load."
+   },
+   {
+    "comp": "CLR",
+    "kind": "E",
+    "why": "through TTCC: the tower-passage window is placed in azimuth."
+   }
+  ],
+  "OVTASK-338": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "through the opti-pitch and the estimators: a wrong density moves the optimal pitch and biases wind and thrust estimates."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "through the thrust / wind estimates of the load handles (GILL, ACS) and the opti-pitch near rated."
+   }
+  ],
+  "OVTASK-345": [
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "through the gain schedule and the wind / thrust estimates: wrong tables give a sluggish or oscillating speed loop and wrong load-handle scheduling."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "through the opti-pitch and the wind-based derating (HWO)."
+   }
+  ],
+  "OVTASK-155": [
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "through the speed-pitch gain schedule (wind breakpoint) and PLBW: a biased estimate changes the loop gain and the minimum pitch at high wind."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "through PLBW / HWO: the minimum pitch and curtailment are triggered at the wrong wind speed."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "through PLBW / HWO: unnecessary derating with a high bias."
+   }
+  ],
+  "OVTASK-153": [
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "through GILL / ACS: the thrust estimate schedules GILL and the ACS load estimates."
+   }
+  ],
+  "OVTASK-142": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "available power used for reporting, reserves and the low-power / ice detection (false stops)."
+   }
+  ],
+  "OVTASK-344": [
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "through the wind estimate during speed transients (inertia term): gain schedule and load handles."
+   }
+  ],
+  "OVTASK-307": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "the rated power scales every normalised function and the power curve."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "the rated power sets thrust and torque at rated, the highest loading point of operation."
+   },
+   {
+    "comp": "DRV",
+    "kind": "EF",
+    "why": "rated torque and power."
+   }
+  ],
+  "OVTASK-140": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "the opti-pitch curve sets the aerodynamic efficiency in partial load."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "too low pitch near rated gives the thrust peak: tower fore-aft extremes and fatigue around rated."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "EF",
+    "why": "idem for the flapwise moment around rated."
+   },
+   {
+    "comp": "CLR",
+    "kind": "E",
+    "why": "thrust peak near rated reduces the tip clearance."
+   }
+  ],
+  "OVTASK-157": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "efficiency in curtailed-speed operation."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "thrust in curtailed operation."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "flapwise load in curtailed operation."
+   }
+  ],
+  "OVTASK-308": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "tip-speed ratio along the partial-load curve."
+   },
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "the torque trajectory (torque vs speed) in partial load."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "F",
+    "why": "rotor speed in partial load sets the 1P / 3P excitation frequencies relative to the tower mode."
+   }
+  ],
+  "OVTASK-115": [
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "torque transient at cut-in when the scaled curve is applied."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "start-up time (availability)."
+   }
+  ],
+  "OVTASK-138": [
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "the minimum pitch at high wind (PLBW_Pit1 / 2, breakpoints) lowers thrust and flapwise moment in yaw error and gusts at high wind."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "idem for the tower fore-aft extreme."
+   },
+   {
+    "comp": "HUB",
+    "kind": "E",
+    "why": "large yaw error at high wind: lower pitch margin gives high tilt / yaw moments."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "PLBW active too early or released too slowly: derating."
+   }
+  ],
+  "OVTASK-116": [
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "start angle sets the aerodynamic torque at the run-up."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "too low start angle: overspeed during the run-up."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "too high start angle: slow or failed start-ups."
+   }
+  ],
+  "OVTASK-156": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "the right reduction source and priority avoids unnecessary curtailment."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "F",
+    "why": "minimum speed references inside a resonance window give operation at tower resonance."
+   }
+  ],
+  "OVTASK-112": [
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "speed not reduced in derated operation: higher blade loads in gusts at derated power."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "idem for the tower."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "overspeed margin in derated operation."
+   }
+  ],
+  "OVTASK-165": [
+   {
+    "comp": "BLD_EDGE",
+    "kind": "E",
+    "why": "keeps the speed-pitch trajectory away from the flutter boundary (aeroelastic instability)."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "speed limit as a function of the collective pitch."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "too conservative limit: speed / power loss at high wind."
+   }
+  ],
+  "OVTASK-154": [
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "the curtailment trajectory at high wind lowers speed and power before cut-out: tower loads at 20-25+ m/s."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "EF",
+    "why": "idem for the blade loads at very high wind."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "curtailment start and slope; number of cut-outs and restarts."
+   }
+  ],
+  "OVTASK-158": [
+   {
+    "comp": "BLD_EDGE",
+    "kind": "EF",
+    "why": "ice mass lowers the edgewise frequencies; pitch offset and limits keep loads with iced blades within design (DLC 1.7, 6.4o / 7.1o)."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "EF",
+    "why": "idem for the flapwise loads with ice."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "production with ice."
+   }
+  ],
+  "OVTASK-101": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "derating at high temperature instead of stopping."
+   }
+  ],
+  "OVTASK-108": [
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "extra power taken from the rotor inertia and the recovery torque."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "rotor-speed drop and recovery (stall / stop risk)."
+   }
+  ],
+  "OVTASK-109": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "speed and pitch transients on fast set-point changes."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "tracking of the active-power set point."
+   }
+  ],
+  "OVTASK-132": [
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "servo gains, deadband and filters set valve and actuator activity."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "actuator phase lag limits the speed-loop gain: tower fore-aft extreme in gusts."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "actuator lag increases the speed peaks."
+   },
+   {
+    "comp": "BLD_EDGE",
+    "kind": "F",
+    "why": "servo oscillation at structural frequencies can excite the blade edgewise mode."
+   },
+   {
+    "comp": "HUB",
+    "kind": "F",
+    "why": "through IPC: tracking at 1P / 2P sets how much tilt / yaw load IPC can remove."
+   }
+  ],
+  "OVTASK-131": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "pitch-rate limits too low saturate the speed loop in gusts and grid faults: overspeed."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "pitch rate in stops sets the thrust drop and the tower fore-aft rebound."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "pitch rate in stops and gusts."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "EF",
+    "why": "pitch-system load and wear from the allowed rates."
+   }
+  ],
+  "OVTASK-296": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "the maximum reference rate saturates the speed loop and load handles in gusts and faults."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "the deadband reduces small pitch movements (activity, bearing damage)."
+   }
+  ],
+  "OVTASK-122": [
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "loop bandwidth sets the thrust response to gusts (fore-aft extreme, DLC 1.4) and the thrust fluctuation in turbulence (fore-aft fatigue, DLC 1.2a); interaction with the tower 1st mode."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "speed peaks in gusts and grid faults; margin to the overspeed limits."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "Kp / Ti set the collective pitch activity and the pitch bearing damage."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "pitch-out speed in gusts sets the flapwise extreme."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "speed regulation around rated."
+   }
+  ],
+  "OVTASK-125": [
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "the schedule keeps the loop gain constant from rated to cut-out: a mismatch gives an oscillating loop (fatigue) or a sluggish one (gust extremes) at some wind speeds."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "sluggish loop at some wind speeds: overspeed peaks."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "too high gain at some wind speeds: pitch activity."
+   }
+  ],
+  "OVTASK-124": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "High Speed Gain (SpdPit_HSG_*) near the speed limits: speed peak in extreme gusts (DLC 9.4c, 1.4)."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "too early activation: pitch chatter in normal operation."
+   }
+  ],
+  "OVTASK-113": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "pitch feed-forward on power-reference changes and grid faults (SpdPit_DeltaPwrToPitFFGain, SpdPit_GFRT_*FF): speed peak after LVRT / grid drop."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "pitch action after a grid fault sets the thrust step on the tower."
+   }
+  ],
+  "OVTASK-159": [
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "torque activity of the partial-load speed loop (drivetrain fatigue)."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "speed tracking of the optimal tip-speed ratio."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "F",
+    "why": "slow RSA window crossing increases time at tower resonance."
+   }
+  ],
+  "OVTASK-161": [
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "too high gain at some speeds: torque oscillations."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "too low gain: poor speed tracking."
+   }
+  ],
+  "OVTASK-160": [
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "hunting between the two controllers around rated: torque and power dips."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "F",
+    "why": "idem: thrust fluctuations around rated."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "power dips around rated."
+   }
+  ],
+  "OVTASK-163": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "the speed shift between the pitch and power references sets the overspeed margin around rated."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "controller interaction around rated: pitch activity."
+   },
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "idem: power oscillations around rated."
+   }
+  ],
+  "OVTASK-162": [
+   {
+    "comp": "TWR_FA",
+    "kind": "F",
+    "why": "the window keeps the 3P / 1P excitation out of the tower frequency: time at resonance drives tower fatigue."
+   },
+   {
+    "comp": "TWR_SS",
+    "kind": "F",
+    "why": "idem for the side-side mode."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "window width and crossing time."
+   }
+  ],
+  "OVTASK-328": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "start / stop speeds and kick-start: overspeed in start-up and stops."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "harsh stops and stop conditions at high wind."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "cut-out / restart thresholds and failed start-ups."
+   }
+  ],
+  "OVTASK-330": [
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "stop power ramps: torque reversal in the drivetrain during stops (DLC 4.x, 5.1)."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "stop ramps set the thrust and torque transient on the tower."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "too slow ramps: overspeed during the stop."
+   }
+  ],
+  "OVTASK-301": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "speed peak during and after the grid fault (DLC 2.5a, 2.1g)."
+   },
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "torque loss and recovery ramp; damper scaling during the fault."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "thrust and torque steps on the tower during the dip and the recovery."
+   }
+  ],
+  "OVTASK-292": [
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "damping of the drivetrain torsional mode: gearbox and main-shaft torque fatigue."
+   },
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "torsional oscillation after grid faults and stops."
+   }
+  ],
+  "OVTASK-145": [
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "drivetrain torsional damping, only if the legacy damper is used."
+   }
+  ],
+  "OVTASK-148": [
+   {
+    "comp": "TWR_SS",
+    "kind": "F",
+    "why": "damping of the tower side-side mode with generator torque / power (misaligned and low-turbulence cases)."
+   },
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "power oscillation added by the damper."
+   }
+  ],
+  "OVTASK-143": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "power envelope vs hardware capability."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "too little power headroom leaves less margin for the speed control."
+   },
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "power headroom for the drivetrain damper."
+   },
+   {
+    "comp": "TWR_SS",
+    "kind": "F",
+    "why": "power headroom for the side-side tower damper."
+   }
+  ],
+  "OVTASK-133": [
+   {
+    "comp": "BLD_FLAP",
+    "kind": "F",
+    "why": "cyclic pitch removes the 1P flapwise load (DLC 1.2a)."
+   },
+   {
+    "comp": "HUB",
+    "kind": "EF",
+    "why": "tilt and yaw moments on hub, main bearing and yaw bearing (fatigue; extremes in DLC 1.3, 1.4, 2.4b)."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "cost of IPC: pitch travel and bearing damage."
+   },
+   {
+    "comp": "CLR",
+    "kind": "E",
+    "why": "less tilt moment and 1P flap at the tower passage."
+   }
+  ],
+  "OVTASK-128": [
+   {
+    "comp": "CLR",
+    "kind": "E",
+    "why": "pitch-out before the tower passage (thresholds, TTCC_PitOffsetMax, delay) in steep shear, EWS and turbulence."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "per-revolution pitch offsets: pitch activity and bearing damage."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "activation too early or too strong."
+   }
+  ],
+  "OVTASK-136": [
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "limits pitch travel when the bearing moment is high (bearing damage), mainly from IPC."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "F",
+    "why": "side effect: less IPC / pitch action leaves more blade load."
+   },
+   {
+    "comp": "HUB",
+    "kind": "F",
+    "why": "idem for the tilt / yaw moments."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "too much attenuation reduces the pitch authority of the speed loop."
+   }
+  ],
+  "OVTASK-127": [
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "raises the minimum pitch when the flapwise moment exceeds the threshold (BLL_PeakMom_Thres, BLL_Kp, filters): flap extremes and their extrapolation (DLC 1.1)."
+   },
+   {
+    "comp": "CLR",
+    "kind": "E",
+    "why": "idem: tip-tower clearance."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "threshold too low: unnecessary pitch-out."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "aggressive filter dynamics: pitch activity."
+   }
+  ],
+  "OVTASK-130": [
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "detects the gust front from the blade moments and pitches out early: tower fore-aft extreme in gust DLCs."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "idem for the blade-root flap extreme."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "activation in normal turbulence: AEP loss."
+   },
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "activation in normal turbulence: pitch activity."
+   }
+  ],
+  "OVTASK-139": [
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "slows the pitch-out when the tower accelerates: tower fore-aft extremes in stops and shut-downs (DLC 4.x, 5.1, 2.x with stop, 2.3)."
+   },
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "slower pitch-out: speed peak during the stop."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "slower pitch-out: blade loads during the stop."
+   }
+  ],
+  "OVTASK-152": [
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "curtails speed / power and adds pitch offsets when the estimated loads are high (site suitability): tower loads in high turbulence (DLC 1.3)."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "EF",
+    "why": "idem for the blade loads."
+   },
+   {
+    "comp": "HUB",
+    "kind": "EF",
+    "why": "idem for the hub loads."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "unnecessary activation in normal turbulence."
+   }
+  ],
+  "OVTASK-141": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "boosted power above rated."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "EF",
+    "why": "boost raises thrust and loads above rated (DLC 1.2a / 1.3)."
+   },
+   {
+    "comp": "DRV",
+    "kind": "EF",
+    "why": "boost raises torque."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "EF",
+    "why": "boost lowers the pitch: higher flapwise loads."
+   }
+  ],
+  "OVTASK-129": [
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "derating when a load handle is unavailable (SafeMode_*): loads in safe mode within design."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "idem for the tower."
+   },
+   {
+    "comp": "HUB",
+    "kind": "E",
+    "why": "idem when IPC is unavailable."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "cost of the safe-mode derating."
+   }
+  ],
+  "OVTASK-135": [
+   {
+    "comp": "PITCH",
+    "kind": "F",
+    "why": "priorities between the load handles and PDA: pitch bearing damage."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "PDA must not cancel a protective pitch-out of BLL / GILL."
+   },
+   {
+    "comp": "CLR",
+    "kind": "E",
+    "why": "idem for TTCC."
+   }
+  ],
+  "OVTASK-123": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "controller overspeed limits: stop before the safety system trips."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "nuisance stops (limits too low) add stop loads; late stops (too high) reach higher speeds."
+   }
+  ],
+  "OVTASK-107": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "safety overspeed limits above the controller limits (hard stop when tripped)."
+   },
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "safety-system stops are harsher (DLC 2.2)."
+   }
+  ],
+  "OVTASK-310": [
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "stops the turbine when the tower acceleration exceeds the limits."
+   },
+   {
+    "comp": "TWR_SS",
+    "kind": "E",
+    "why": "idem for side-side acceleration."
+   }
+  ],
+  "OVTASK-146": [
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "stops on sustained drivetrain oscillation."
+   }
+  ],
+  "OVTASK-151": [
+   {
+    "comp": "BLD_EDGE",
+    "kind": "EF",
+    "why": "pitch offset / speed reduction or stop when the edgewise vibration exceeds the limits (operation and idling)."
+   }
+  ],
+  "OVTASK-274": [
+   {
+    "comp": "BLD_FLAP",
+    "kind": "EF",
+    "why": "pitch offset / speed reduction when the flapwise vibration exceeds the limits."
+   }
+  ],
+  "OVTASK-273": [
+   {
+    "comp": "BLD_EDGE",
+    "kind": "E",
+    "why": "stop on a drop of the edge frequency (damage detection)."
+   }
+  ],
+  "OVTASK-288": [
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "alarm on a tower frequency drift (structural change)."
+   }
+  ],
+  "OVTASK-291": [
+   {
+    "comp": "HUB",
+    "kind": "E",
+    "why": "pitch offset with large yaw misalignment (DLC 2.4a/b): hub and blade loads."
+   },
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "idem for the blade loads."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "unnecessary offsets."
+   }
+  ],
+  "OVTASK-290": [
+   {
+    "comp": "TWR_FA",
+    "kind": "E",
+    "why": "wind limits for cut-out: no operation above the design wind."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "stops and restarts at high wind."
+   }
+  ],
+  "OVTASK-278": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "false low-power / ice stops."
+   }
+  ],
+  "OVTASK-277": [
+   {
+    "comp": "BLD_EDGE",
+    "kind": "E",
+    "why": "iced rotor not detected: loads with ice and ice throw."
+   },
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "false detections."
+   }
+  ],
+  "OVTASK-281": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "false no-cut-in alarms."
+   }
+  ],
+  "OVTASK-286": [
+   {
+    "comp": "AEP",
+    "kind": "F",
+    "why": "observer: information only."
+   }
+  ],
+  "OVTASK-283": [
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "motoring power limit (drivetrain / converter overload while motoring)."
+   }
+  ],
+  "OVTASK-284": [
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "reverse rotation not detected: bearing / gearbox lubrication damage."
+   }
+  ],
+  "OVTASK-276": [
+   {
+    "comp": "DRV",
+    "kind": "E",
+    "why": "gearbox slip after torque transients."
+   }
+  ],
+  "OVTASK-323": [
+   {
+    "comp": "BLD_FLAP",
+    "kind": "E",
+    "why": "false sensor faults switch the load handles off (safe mode)."
+   }
+  ],
+  "OVTASK-333": [
+   {
+    "comp": "DRV",
+    "kind": "F",
+    "why": "order amplitudes for the imbalance / drivetrain monitors."
+   }
+  ],
+  "OVTASK-335": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "invalid speed source used for control and protection."
+   }
+  ],
+  "OVTASK-336": [
+   {
+    "comp": "SPD",
+    "kind": "E",
+    "why": "faulty speed sensor not detected."
+   }
+  ]
+ },
+ "dlc_switch": {
+  "ACS (adaptive control strategy)": "OVTASK-152",
+  "Controller overspeed monitor": "OVTASK-123",
+  "Power Boost (PB)": "OVTASK-141",
+  "Safety overspeed system (EXC_OVRSPD)": "OVTASK-107"
+ }
 }

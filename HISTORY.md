@@ -3,7 +3,11 @@
 Read together with `CLAUDE.md`. Section 0 is the current state; then the timeline, decisions, reference numbers, domain
 knowledge and ideas.
 
-## 0. Current state (04-Nov-2026)
+## 0. Current state (08-Nov-2026)
+- **Version 1.3.0** (local commit, not pushed): Load case view (which control strategies affect a load case / a load,
+  ranking of what to tune first). Exe built and tested; smoke test ui8 / ui9.
+
+## 0b. Previous state (04-Nov-2026)
 - **Version 1.2.0** pushed to GitHub with tag `v1.2.0`; zip `release\PLANC_Dependency_Explorer_v1.2.0.zip` ready; the
   GitHub release itself is created by the user (web UI). Content: "Highly affected functionalities / by" rewritten as
   tuning couplings with the physical reason (113 couplings), model-link sections removed from the overview, new graph
@@ -52,6 +56,17 @@ type values.
   - PyInstaller onefile exe.
 - **02-Nov-2026:** the tool moved to `D:\PYTHON_functions_epm\PLANC_Dependency_Explorer`, plus CLAUDE.md, HISTORY.md, the
   smoke test and the git repo.
+- **08-Nov-2026, v1.3.0. The user's request:** a view from the load side: pick a load case and see, as a block diagram,
+  every control strategy that can affect it, with arrows that tell the risk (tower fatigue, extreme...); the goal is to
+  know which algorithms make most sense to tune when a load (e.g. tower) rises in a load case and must come down.
+  - New data (single source in the project, `tools/tuning_sheets/load_effects.py`): load effects per functionality
+    (component, extreme / fatigue, mechanism; 183 effects), keywords that name a component in a DLC reason, and the
+    DLC set-up switches mapped to functions (ACS, controller overspeed monitor, Power Boost, safety overspeed).
+  - Live data: the DLC use (ULS → extreme, FLS → fatigue) and the functions disabled in each case come from the project
+    simulation. The per-DLC relevance and reason come from the tuning sheets.
+  - Second angle: by load (all load cases), e.g. Tower fore-aft extreme → Pitch Control States (rates in stops),
+    Speed-Pitch PI, TAL, GILL, Power Control States, Rotor Speed Filter... at the top.
+  - Engineering judgement (to review with Loads): the load effects and the ranking weights.
 - **03-Nov-2026 evening, v1.2.0. The user's correction:** in OVTASK-122 the overview said the Speed-Pitch Controller
   highly affects the Pitch Reference Limiter because the limiter uses PitchRefCollective. The user: "Highly affected
   functionalities" means that tuning THIS function affects the performance / tuning of the other one to a high degree,
