@@ -122,12 +122,17 @@ def affecting_load(comp, kind=None):
             continue
         kinds = set(kind or ''.join(e[1] for e in eff))
         rows = [(lv, c, rs) for lv, codes, rs in overview.dlc_items(t) for c in codes if set(default_kind(c)) & kinds]
-        level = max((lv for lv, _, _ in rows), key=lambda x: LEVEL_W[x]) if rows else None
-        codes = list(dict.fromkeys(c for lv, c, _ in sorted(rows, key=lambda r: -LEVEL_W[r[0]])))
-        named = [rs for _, _, rs in rows if comp in named_components(rs)] if comp else []
-        n_high = sum(1 for lv, _, _ in rows if lv == 'High')
-        score = (LEVEL_W[level] if level else 0.5) + (0.5 if any(not e[2].lower().startswith('through') for e in eff) else 0)             + (0.5 if named else 0) + min(n_high, 5) * 0.1 - (0.7 if is_monitor(t['name']) else 0)
-        out.append(dict(task=t, level=level, reasons=[f'{lv}: DLC {c}' for lv, c, _ in rows][:12], effects=eff,
+        # High impact on THIS load = a High DLC row whose reason names the load (user 08-Nov-2026: High only)
+        high = [r for r in rows if r[0] == 'High' and (not comp or comp in named_components(r[2]))]
+        level = 'High' if high else (max((lv for lv, _, _ in rows), key=lambda x: LEVEL_W[x]) if rows else None)
+        if level == 'High' and not high:
+            level = 'Medium'
+        codes = list(dict.fromkeys(c for _, c, _ in high))
+        direct = any(not e[2].lower().startswith('through') for e in eff)
+        score = LEVEL_W.get(level, 0.5) + (0.5 if direct else 0) + min(len(codes), 5) * 0.1 - \
+            (0.7 if is_monitor(t['name']) else 0)
+        out.append(dict(task=t, level=level, reasons=[f'High: {overview.strip(rs)}' for _, _, rs in
+                                                      dict.fromkeys(high)][:6], effects=eff,
                         named=set(), disabled=False, score=score, codes=codes))
     out.sort(key=lambda d: (-d['score'], d['task']['name']))
     return out
@@ -153,7 +158,6 @@ class LoadCaseWindow:
         self.win.geometry('1600x900')
         self.comp = tk.StringVar(value='All loads')
         self.kind = tk.StringVar(value='Extreme + fatigue')
-        self.min_level = tk.StringVar(value='Lower')
         self.q = tk.StringVar()
         self.tip = None
         self.items = []
@@ -184,10 +188,9 @@ class LoadCaseWindow:
         cb2 = ttk.Combobox(f, textvariable=self.kind, state='readonly', width=30,
                            values=['Extreme + fatigue', 'Extreme (ULS)', 'Fatigue (FLS)'])
         cb2.grid(row=1, column=1, sticky='we', padx=3)
-        ttk.Label(f, text='Relevance at least').grid(row=2, column=0, sticky='w')
-        cb3 = ttk.Combobox(f, textvariable=self.min_level, state='readonly', width=30, values=['Lower', 'Medium', 'High'])
-        cb3.grid(row=2, column=1, sticky='we', padx=3)
-        for c in (cb, cb2, cb3):
+        ttk.Label(f, text='Only strategies with High impact (tuning sheets).', foreground=MUTED).grid(
+            row=2, column=0, columnspan=2, sticky='w')
+        for c in (cb, cb2):
             c.bind('<<ComboboxSelected>>', lambda e: self.refresh())
         f.columnconfigure(1, weight=1)
         g = ttk.LabelFrame(left, text=' Load case ', padding=4)
@@ -222,7 +225,7 @@ class LoadCaseWindow:
         self.rank.heading('#0', text='Functionality')
         self.rank.heading('n', text='#')
         self.rank.heading('level', text='Relevance')
-        self.rank.heading('loads', text='Loads it acts on here')
+        self.rank.heading('loads', text='Loads / load cases')
         self.rank.column('#0', width=230)
         self.rank.column('n', width=30, anchor='center')
         self.rank.column('level', width=70, anchor='center')
@@ -301,7 +304,6 @@ class LoadCaseWindow:
     def refresh(self):
         code, setup, folder = self.selection()
         comp, kind = self.filters()
-        lvl = LEVEL_W[self.min_level.get()]
         self.code, self.setup, self.folder = code, setup, folder
         if code is None:
             self.items = []
@@ -309,7 +311,7 @@ class LoadCaseWindow:
             self.items = affecting_load(comp, kind) if comp else []
         else:
             self.items = affecting(code, setup, comp, kind)
-        self.items = [d for d in self.items if d['level'] is None or LEVEL_W[d['level']] >= lvl]
+        self.items = [d for d in self.items if d['level'] == 'High']          # user 08-Nov-2026: High impact only
         self.fill_rank()
         self.draw()
 
@@ -321,14 +323,16 @@ class LoadCaseWindow:
         if self.code == 'ALL':
             self.rank_lbl.configure(text=('Functionalities that act on ' + (components().get(comp, 'the load') if comp else
                                                                            '... pick a load group') +
-                                          (f' ({KIND_TXT[kind]})' if kind else '') + ', ranked by relevance in their DLCs.'))
+                                          (f' ({KIND_TXT[kind]})' if kind else '') + ': High impact = High in a load case whose reason names this load. Ranked.'))
         elif self.code:
-            self.rank_lbl.configure(text='Ranked by relevance in this load case (High / Medium / Lower of the tuning sheet), '
-                                         'whether the load is named in the reason, and direct vs indirect action. Disabled '
+            self.rank_lbl.configure(text='High-impact strategies in this load case, ranked by '
+                                         'whether the reason names the load and direct vs indirect action (monitors last). Disabled '
                                          'functions cannot act in this case.')
         n = 0
         for i, d in enumerate(self.items):
             loads = ', '.join(dict.fromkeys(f"{SHORT.get(c, c)} {k}" for c, k, _ in d['effects']))
+            if d.get('codes'):
+                loads = 'DLC ' + ', '.join(d['codes'][:6])
             if not d['disabled']:
                 n += 1
             r.insert('', 'end', iid=str(i), text=d['task']['name'], values=('' if d['disabled'] else n,
@@ -416,8 +420,8 @@ class LoadCaseWindow:
             cv.create_text(20, 20, anchor='nw', fill=MUTED, font=('Segoe UI', 11), text=(
                 'Pick a load case on the left to see every control strategy whose tuning affects it.\n\n'
                 'Or pick "(all load cases) - by load" and a load group (e.g. Tower fore-aft, Extreme) to see which '
-                'strategies act on that load.\n\nArrow colour / width = relevance (High / Medium / Lower), box label = loads '
-                'it acts on in that case, dashed = disabled in the case. Hover for the reason; click to open the overview.'),
+                'strategies act on that load.\n\nOnly strategies with High impact are shown. Box label = loads it acts on '
+                'in that case, dashed = disabled in the case. Hover for the reason; click to open the overview.'),
                 width=max(cv.winfo_width() - 40, 300))
             return
         W = max(cv.winfo_width(), 300)
@@ -445,7 +449,7 @@ class LoadCaseWindow:
                                    width=3)
         cv.tag_lower(rect)
         cv.create_text(20, 22, anchor='w', fill=MUTED, font=('Segoe UI', 9, 'bold'),
-                       text=f'{len(items)} control strategies affect this ' + ('load' if self.code == 'ALL' else 'load case'))
+                       text=f'{len(items)} control strategies with High impact on this ' + ('load' if self.code == 'ALL' else 'load case'))
         if not items:
             cv.create_text(xc, cy + ch / 2 + 30, fill=MUTED, font=('Segoe UI', 10, 'italic'),
                            text='No functionality with these filters.' if self.code != 'ALL' or self.filters()[0]
@@ -463,6 +467,8 @@ class LoadCaseWindow:
                 t1 = cv.create_text(x + 6, y - 12, anchor='w', text=textwrap.shorten(d['task']['name'], nmax, placeholder='…'),
                                     font=('Segoe UI', 9, 'bold'), fill=INK if not d['disabled'] else '#95A5A6')
                 loads = ', '.join(dict.fromkeys(f"{SHORT.get(c, c)} {k}" for c, k, _ in d['effects']))
+                if d.get('codes'):
+                    loads = 'in DLC ' + ', '.join(d['codes'][:6])
                 txt2 = (d['level'] or '-') + ' | ' + ('disabled in this case' if d['disabled'] else
                                                       loads or '(no load effect of this type)')
                 t2 = cv.create_text(x + 6, y + 9, anchor='w', text=textwrap.shorten(txt2, int(nmax * 1.9), placeholder='…'),
@@ -478,6 +484,6 @@ class LoadCaseWindow:
                 for it in (r, t1, t2):
                     cv.tag_bind(it, '<Button-1>', lambda e, d=d: self.open_sel(d))
         cv.create_text(W / 2, H - 20, fill=MUTED, font=('Segoe UI', 8), width=W - 30, justify='center', text=(
-            'Arrow colour and width = relevance of the load case for the tuning of the functionality (red High, orange '
-            'Medium, grey Lower). E = extreme, F = fatigue. Dashed = disabled in this load case. Hover for the reason, '
+            'Only strategies with High impact on this load case (tuning sheets). E = extreme, F = fatigue. Dashed = '
+            'disabled in this load case. Hover for the reason, '
             'click a box for its tuning overview. Relevance and load effects are engineering judgement: review with Loads.'))

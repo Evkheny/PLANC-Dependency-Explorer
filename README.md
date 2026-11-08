@@ -56,13 +56,13 @@ Nothing else is needed. No Python is needed on the PC that runs the `.exe`.
    tune to reduce it.
    - **By load case:** pick a DLC (the project simulation's, or the DLC codes of the knowledge base). The DLC sits in
      the centre with its use (extreme = in ULS, fatigue = in FLS) and the functions disabled in that case; every
-     functionality whose tuning affects it points at it. Arrow colour / width = relevance (High / Medium / Lower from
-     its tuning sheet); the box says which loads it acts on in that case (e.g. "Tower FA E, Blade flap E"); dashed =
+     functionality whose tuning affects it points at it. The box says which loads it acts on in that case (e.g. "Tower FA E, Blade flap E"); dashed =
      disabled in the case.
    - **By load:** pick "(all load cases) - by load" and a load group (Tower fore-aft, Blade flap, Pitch bearing,
      Drivetrain, Hub / bearings, Clearance, Overspeed, AEP...) and type (extreme / fatigue).
-   - Filters: load group, load type, minimum relevance. Example: tower load rising in DLC 1.4 → pick DLC 1.4, Tower
-     fore-aft, Extreme.
+   - **Only strategies with High impact are shown:** High relevance of that load case in their tuning sheet; by load,
+     High in a load case whose reason names that load. Filters: load group and load type. Example: tower load rising in
+     DLC 1.4 → pick DLC 1.4, Tower fore-aft, Extreme.
    - **What to tune first** (right): ranking by relevance, whether the reason names that load, direct vs indirect action
      (estimators act through other functions) and monitors last (they protect, they do not reduce the load). Select a
      row for the reason and the mechanism; double-click (or click a box) opens its tuning overview.

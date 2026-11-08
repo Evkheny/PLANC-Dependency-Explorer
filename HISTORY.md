@@ -67,6 +67,9 @@ type values.
   - Second angle: by load (all load cases), e.g. Tower fore-aft extreme → Pitch Control States (rates in stops),
     Speed-Pitch PI, TAL, GILL, Power Control States, Rotor Speed Filter... at the top.
   - Engineering judgement (to review with Loads): the load effects and the ranking weights.
+  - User, same day: simplify, show only High impact. By DLC: High relevance in the tuning sheet; by load: High in a DLC
+    whose reason names the load (tower fore-aft extreme: 7 strategies - Pitch Control States, GILL, Power Control
+    States, Rotor Speed Filter, TAL, Speed-Pitch PI, Tower Vibration Monitor). Relevance filter removed.
 - **03-Nov-2026 evening, v1.2.0. The user's correction:** in OVTASK-122 the overview said the Speed-Pitch Controller
   highly affects the Pitch Reference Limiter because the limiter uses PitchRefCollective. The user: "Highly affected
   functionalities" means that tuning THIS function affects the performance / tuning of the other one to a high degree,

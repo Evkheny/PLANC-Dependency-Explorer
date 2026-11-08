@@ -130,7 +130,8 @@ outside_model_params, cd.
 - **Load case view** (`loadview.LoadCaseWindow`, toolbar button): DLC use from the simulation set-up (`setup.uls` /
   `setup.fls`; IEC default by code when no simulation), functions disabled in the case from the 'Control functions' /
   'Safety system' facts mapped with `dlc_switch`. DLC match: exact, `x` wildcard, and a code without letter matches its
-  lettered variants (`2.1` → 2.1g). Score = level (3 / 2 / 1) + 0.5 if the reason names the load + 0.5 if direct
+  lettered variants (`2.1` → 2.1g). **Only High impact is shown** (user, 08-Nov-2026): by DLC, level == High; by load,
+  a High DLC row whose reason names the load (`named_components`). Score = level (3 / 2 / 1) + 0.5 if the reason names the load + 0.5 if direct
   (mechanism not starting "through") − 0.7 for monitors; by-load also + 0.1 per High DLC (max 5).
 - **Graph mode** (`self.gmode`): `draw` = signal links, `draw_tuning` = tuning couplings from `overview.couplings(comp)`
   (grouped by peer; tasks without a Simulink function are grey boxes; hover = reasons).

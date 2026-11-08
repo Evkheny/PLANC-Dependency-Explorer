@@ -6,12 +6,13 @@
 - **Load case view** (toolbar): which control strategies affect a load case or a load, and which make most sense to
   tune to reduce it.
   - **By load case:** the DLC in the centre (use: extreme if it enters ULS, fatigue if it enters FLS; functions
-    disabled in that case) and an arrow from every functionality whose tuning affects it. Arrow colour and width =
-    relevance (High / Medium / Lower); each box tells the loads it acts on in that case (e.g. "Tower FA E, Blade flap E").
+    disabled in that case) and an arrow from every functionality whose tuning has a High impact on it; each box tells the loads it acts on in that case (e.g. "Tower FA E, Blade flap E").
     Functions disabled in the case are dashed.
   - **By load:** pick a load group (tower fore-aft / side-side, blade flap / edge, pitch bearing, drivetrain, hub and
     bearings, tip clearance, overspeed, AEP) and a type (extreme / fatigue) to see the functionalities that act on it
     and in which load cases.
+  - Only the strategies with **High** impact are shown (by load: High in a load case whose reason names that load), so
+    the diagram stays short (e.g. tower fore-aft extreme: 7 strategies).
   - **What to tune first:** ranking with the reason (why the load case matters for that tuning) and the mechanism (how
     its tuning changes the load); double-click opens its tuning overview.
   - The load cases and their use come from the project simulation when one is loaded; otherwise the DLC codes of the
