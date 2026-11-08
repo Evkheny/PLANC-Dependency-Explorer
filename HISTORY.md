@@ -4,7 +4,7 @@ Read together with `CLAUDE.md`. Section 0 is the current state; then the timelin
 knowledge and ideas.
 
 ## 0. Current state (08-Nov-2026)
-- **Version 1.3.0** (local commit, not pushed): Load case view (which control strategies affect a load case / a load,
+- **Version 1.3.0** pushed to GitHub with tag `v1.3.0`, zip `release\PLANC_Dependency_Explorer_v1.3.0.zip` (the GitHub release is created by the user): Load case view (which control strategies affect a load case / a load,
   ranking of what to tune first). Exe built and tested; smoke test ui8 / ui9.
 
 ## 0b. Previous state (04-Nov-2026)
