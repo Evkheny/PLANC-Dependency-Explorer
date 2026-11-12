@@ -4,7 +4,7 @@ Read together with `CLAUDE.md`. Section 0 is the current state; then the timelin
 knowledge and ideas.
 
 ## 0. Current state (12-Nov-2026)
-- **Version 1.4.0** (local commit, not pushed): right-click copy of the parameter / signal / type-selection tables, the
+- **Version 1.4.0** pushed to GitHub with tag `v1.4.0`, zip `release/PLANC_Dependency_Explorer_v1.4.0.zip` (the GitHub release is created by the user): right-click copy of the parameter / signal / type-selection tables, the
   values-per-type popup, the load-case ranking and the tuning overview as a table for Excel / OneNote (HTML + TSV
   clipboard). User request 12-Nov-2026.
 
