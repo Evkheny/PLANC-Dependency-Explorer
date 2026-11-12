@@ -66,7 +66,12 @@ Nothing else is needed. No Python is needed on the PC that runs the `.exe`.
    - **What to tune first** (right): ranking by relevance, whether the reason names that load, direct vs indirect action
      (estimators act through other functions) and monitors last (they protect, they do not reduce the load). Select a
      row for the reason and the mechanism; double-click (or click a box) opens its tuning overview.
-10. **Load cases (DLCs)**: the same window as SimStatsPlotter. It lists the load cases of a simulation (wind, speeds,
+10. **Copy tables (right mouse button):** on the Parameters, Signals and Type selections tabs, the values-per-type
+    popup and the "What to tune first" ranking: *Copy selected rows* or *Copy whole table*. On the Tuning overview:
+    *Copy overview as table* (one row per field, bullets and bold kept), *Copy selected text*, *Copy for Jira*. The
+    clipboard gets an HTML table (Excel, OneNote, Word, Outlook paste a real table; Excel keeps each overview field in one
+    cell) and tab-separated text.
+11. **Load cases (DLCs)**: the same window as SimStatsPlotter. It lists the load cases of a simulation (wind, speeds,
    number of simulations, PSF, ULS/FLS use, events), opens the card of each load case, and compares simulations: new,
    removed and changed cases, and the template differences.
 
@@ -77,11 +82,13 @@ Settings, the model and the load-case cache (`dlccache`) are stored in `%APPDATA
 - `planc_model.py` is the scanner. It can also be run on its own: `python planc_model.py <Controller> --cd <pdf> --csv <csv> --out model.json`.
 - `planc_explorer.py` is the window (Tkinter).
 - `overview.py` builds the tuning overview from `tuning_kb.json`, the model and the load cases.
+- `clipboard_win.py` copies tables to the Windows clipboard as HTML + tab-separated text (ctypes, no extra package);
+  `bind_tree_copy(tree, title)` adds the right-click menu to a Treeview.
 - `loadview.py` is the Load case view (logic: `affecting`, `affecting_load`; window: `LoadCaseWindow`).
 - `dlcsetup.py`, `dlcview.py`, `dlc_inputs.py`, `dlc_viewutil.py`, `screen_fit.py` are copied from SimStatsPlotter (load
   cases; keep them in sync). `slx_trace.py` traces where a signal is used inside a consumer.
 - `build_exe.cmd` creates a venv, installs `pyinstaller`, `pymupdf` and `openpyxl`, and builds
-  `dist\PLANC_Dependency_Explorer.exe` (with `tuning_kb.json` inside).
+  `dist\PLANC_Dependency_Explorer.exe` from `PLANC_Dependency_Explorer.spec` (with `tuning_kb.json` inside).
 
 The PDF is read with PyMuPDF, which is dual-licensed: AGPL-3.0 or an Artifex commercial licence. Check that this fits your company's rules before distributing the `.exe` outside the team.
 

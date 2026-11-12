@@ -17,8 +17,9 @@ import overview  # noqa: E402
 import dlcsetup  # noqa: E402
 import dlcview  # noqa: E402
 import loadview  # noqa: E402
+import clipboard_win  # noqa: E402
 
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 APP = 'PLANC Dependency Explorer'
 DATA = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'PLANC_Dependency_Explorer')
 CFG = os.path.join(DATA, 'config.json')
@@ -266,6 +267,7 @@ class Explorer(tk.Tk):
         t.tag_configure('in', foreground='#1A5276')
         t.tag_configure('out', foreground='#196F3D')
         t.tag_configure('outside', foreground='#7D3C98')
+        clipboard_win.bind_tree_copy(t, lambda: f'{self.sel}: {title}')
         return t
 
     def sort(self, t, c):
@@ -709,6 +711,7 @@ class Explorer(tk.Tk):
                f"Used by: {', '.join(v.get('users', [])) or ', '.join('CD ' + s for s in v.get('cd_sections', [])) or '-'}")
         ttk.Label(w, text=hdr, padding=8, wraplength=600).pack(fill='x')
         t = ttk.Treeview(w, columns=('tv', 'val'), show='headings')
+        clipboard_win.bind_tree_copy(t, f'{p}: values per {v.get("type") or "type value"}')
         t.heading('tv', text=v.get('type') or 'Type value')
         t.heading('val', text='Value')
         t.column('tv', width=320)
@@ -842,6 +845,7 @@ class Explorer(tk.Tk):
         tx.tag_configure('note', foreground=MUTED, font=('Segoe UI', 9, 'italic'))
         tx.tag_bind('link', '<Enter>', lambda e: tx.configure(cursor='hand2'))
         tx.tag_bind('link', '<Leave>', lambda e: tx.configure(cursor='arrow'))
+        tx.bind('<Button-3>', lambda e: self.ov_menu(ov, e))
         ov.comp, ov.keys = None, []
         self.__dict__.setdefault('ovs', []).append(ov)
         return ov
@@ -1036,6 +1040,33 @@ class Explorer(tk.Tk):
                     if j < len(items) - 1:
                         tx.insert('end', ', ', 'bul')
             tx.insert('end', '\n', 'bul')
+
+    def ov_menu(self, ov, e):
+        m = tk.Menu(self, tearoff=0)
+        has = self.ov_task(ov) is not None
+        m.add_command(label='Copy overview as table (Excel / OneNote)', command=lambda: self.copy_ov_table(ov),
+                      state='normal' if has else 'disabled')
+        try:
+            sel = ov.tx.get('sel.first', 'sel.last')
+        except tk.TclError:
+            sel = ''
+        m.add_command(label='Copy selected text', state='normal' if sel else 'disabled',
+                      command=lambda: clipboard_win.copy(self, sel))
+        m.add_command(label='Copy for Jira (wiki markup)', command=lambda: self.copy_jira(ov),
+                      state='normal' if has else 'disabled')
+        m.tk_popup(e.x_root, e.y_root)
+
+    def copy_ov_table(self, ov):
+        """The overview as a two-column table (row | content): tab-separated text for Excel and HTML for OneNote."""
+        task = self.ov_task(ov)
+        if not task:
+            return
+        rows = overview.table_rows(task, self.M, self.project_sims(), self.ty.get(), self.va.get(), self.vb.get())
+        text = clipboard_win.tsv([(k, overview.paras_text(v)) for k, v in rows])
+        html = clipboard_win.html_table([(('html', f'<b>{k}</b>'), ('html', overview.paras_html(v))) for k, v in rows],
+                                        header=False, title=f"{task['key']}  {task['name']}")
+        clipboard_win.copy(self, text, html)
+        self.status(f"{task['key']}: overview copied as a table (paste in Excel or OneNote).")
 
     def copy_jira(self, ov):
         task = self.ov_task(ov)

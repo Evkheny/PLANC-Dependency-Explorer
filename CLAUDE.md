@@ -40,6 +40,7 @@ overview table, without gates) and the **load cases (DLCs)** of simulation folde
 | `planc_explorer.py` | Tkinter UI, the `Explorer` class. `--build` does a headless rebuild from the saved config and writes `build.log`. Holds `__version__`. |
 | `overview.py` | Tuning overview: `tasks_for(comp)`, `dlc_items` / `match_dlcs` / `dlc_rows` (KB DLC codes → simulation folders), `links` (model links with role), `type_params`, `jira_markup`. |
 | `tuning_kb.json` | Tuning knowledge base: 76 tasks `{key, name, comp, cd, subarea, scope, kpi, dlcs, affects, affected_by, risk, workflow}` built from the SG5.2-170-HCF tuning sheets (gates and project-only sentences removed; `workflow` is not shown), plus `couplings` = `[{from, to, reason}]` (113 tuning couplings), `effects` = `{key: [{comp, kind, why}]}` (183 load effects, kind E / F / EF), `components` (load groups), `keywords` (words that name a load group in a DLC reason) and `dlc_switch` (DLC set-up label → OVTASK of a function switched off in the case). `effects` / `components` / `keywords` / `dlc_switch` come from the project's `tools/tuning_sheets/load_effects.py`. `affects` / `affected_by` are generated from `couplings` by the project's `tools/tuning_sheets/coupling.py` (single source: edit there, then regenerate the Word document and this file). Markup: `**bold**`, `- ` bullets, `[P]` = proposed. `comp` is None for 6 tasks. Bundled in the exe (`--add-data`). |
+| `clipboard_win.py` | Clipboard with two formats at once: "HTML Format" (CF_HTML, table) + CF_UNICODETEXT (TSV, Excel quoting). `bind_tree_copy` = right-click menu on a Treeview (selected rows / whole table). Line breaks inside a cell use `<br style="mso-data-placement:same-cell">` so Excel keeps a field in one cell. Falls back to the Tk clipboard (text). |
 | `loadview.py` | Load case view: `affecting(code, setup, comp, kind)` (functionalities affecting a DLC, with level, reasons, load effects matching the DLC use E / F, disabled flag, score), `affecting_load(comp, kind)` (by load), `LoadCaseWindow` (DLC list, filters, diagram, ranking). |
 | `slx_trace.py` | `Slx(path).first_users(inport)`: the first blocks that use a root inport inside a component (through Goto/From, subsystems and library links). |
 | `dlcsetup.py`, `dlcview.py`, `screen_fit.py` | Copied from `D:\PYTHON_functions_epm\SimStatsPlotter` (keep in sync): load-case reader and the Load cases window. |
@@ -127,6 +128,9 @@ outside_model_params, cd.
   - Signals: double-click jumps to the peer.
   - Type selections.
   - Description: model data plus CD section, chapter, page and intro.
+- **Copy:** every detail table gets `clipboard_win.bind_tree_copy` in `Explorer.table`; the overview Text has
+  `ov_menu` (copy as table = `overview.table_rows` → `paras_text` / `paras_html`; copy selection; copy for Jira).
+  Tested by pasting into Excel through COM (parameters 28 x 10; overview 8 x 2 with bullets U+2022, line breaks, bold).
 - **Load case view** (`loadview.LoadCaseWindow`, toolbar button): DLC use from the simulation set-up (`setup.uls` /
   `setup.fls`; IEC default by code when no simulation), functions disabled in the case from the 'Control functions' /
   'Safety system' facts mapped with `dlc_switch`. DLC match: exact, `x` wildcard, and a code without letter matches its
@@ -147,9 +151,11 @@ outside_model_params, cd.
 
 ## Build, test, release
 - **Run from source:** `pip install pymupdf`, then `python planc_explorer.py`.
-- **Exe:** run `build_exe.cmd`. pymupdf 2.x pulls numpy, onnxruntime, pymupdf4llm and pymupdf_layout; they are excluded
-  in PyInstaller because `import pymupdf` does not need them. `tuning_kb.json` is added with `--add-data` (read through
-  `sys._MEIPASS`). The result is about 37 MB.
+- **Exe:** run `build_exe.cmd`, which builds from `PLANC_Dependency_Explorer.spec` (committed). pymupdf 2.x pulls numpy,
+  onnxruntime, pymupdf4llm and pymupdf_layout (excluded modules), and its wheel ships the layout ONNX models
+  (`pymupdf/layout`) and MuPDF dev files (`mupdf-devel`), which the spec filters out of `a.datas` / `a.binaries`:
+  `import pymupdf` needs none of them. `tuning_kb.json` is a data file (read through `sys._MEIPASS`). About 32 MB.
+  Without the filter the exe is about 75 MB.
 - **Verify after changes:**
   1. Headless build: `dist\PLANC_Dependency_Explorer.exe --build`, then read `%APPDATA%\PLANC_Dependency_Explorer\build.log`.
      It must start with `OK` and give the reference numbers in HISTORY.md for the same release.

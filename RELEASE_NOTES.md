@@ -1,5 +1,15 @@
 # PLANC Dependency Explorer - Release notes
 
+## v1.4.0 (12-Nov-2026)
+
+### New
+- **Copy tables with the right mouse button**, ready to paste in Excel or OneNote (also Word / Outlook):
+  - Parameters, Signals and Type selections tabs, the values-per-type popup and the "What to tune first" ranking:
+    *Copy selected rows* or *Copy whole table* (with the column headers).
+  - Tuning overview: *Copy overview as table* (one row per field; bullets, bold and line breaks kept, each field in
+    one Excel cell), *Copy selected text* and *Copy for Jira*.
+  - The clipboard holds an HTML table and tab-separated text, so each application takes the format it handles best.
+
 ## v1.3.0 (08-Nov-2026)
 
 ### New

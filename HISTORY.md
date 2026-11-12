@@ -3,7 +3,12 @@
 Read together with `CLAUDE.md`. Section 0 is the current state; then the timeline, decisions, reference numbers, domain
 knowledge and ideas.
 
-## 0. Current state (08-Nov-2026)
+## 0. Current state (12-Nov-2026)
+- **Version 1.4.0** (local commit, not pushed): right-click copy of the parameter / signal / type-selection tables, the
+  values-per-type popup, the load-case ranking and the tuning overview as a table for Excel / OneNote (HTML + TSV
+  clipboard). User request 12-Nov-2026.
+
+## 0a. State on 08-Nov-2026
 - **Version 1.3.0** pushed to GitHub with tag `v1.3.0`, zip `release\PLANC_Dependency_Explorer_v1.3.0.zip` (the GitHub release is created by the user): Load case view (which control strategies affect a load case / a load,
   ranking of what to tune first). Exe built and tested; smoke test ui8 / ui9.
 
@@ -159,6 +164,10 @@ PitchRefCollective as event data. The full rebuild with tracing takes about 15-2
   - ANR handled by Loads/SCADA; rotor imbalance tuned by SLC.
 
 ## 5. Pitfalls met
+- **Build venv in the Claude scratchpad got damaged** (12-Nov-2026: half of PIL and pip missing, probably a temp
+  cleanup): recreate it; `build_exe.cmd` uses its own `.buildenv` in the repo folder.
+- **Exe size doubled to 75 MB** with a fresh venv: the PyMuPDF wheel now ships ONNX layout models and MuPDF dev files
+  that the PyInstaller hook collects as data. Filtered in `PLANC_Dependency_Explorer.spec` (exe 32 MB, `--build` OK).
 - **pymupdf 2.0 dependencies:** it installs numpy, onnxruntime, pymupdf4llm and pymupdf_layout. Exclude them in
   PyInstaller, or the exe grows a lot. Plain `import pymupdf` works without them.
 - **Headings in the PDF text:** PyMuPDF puts the section number and title on separate lines ("9.4.1" / "Introduction").

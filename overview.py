@@ -160,10 +160,8 @@ def strip(t):
     return t.replace('**', '').replace('[P] ', '(proposed) ').replace('[P]', '(proposed)')
 
 
-def jira_markup(task, M=None, sims=(), ty='WTGType', a='', b=''):
-    """Jira wiki table of the overview (gates omitted), ready to paste in an OVTASK."""
-    def cell(paras):
-        return ' \\\\ '.join(('* ' + strip(p[2:])) if p.startswith('- ') else strip(p) for p in paras).replace('|', '/')
+def table_rows(task, M=None, sims=(), ty='WTGType', a='', b=''):
+    """[(row label, [paragraphs])] of the overview table (gates omitted). Paragraph markup: '- ' bullet, **bold**, [P]."""
     rows = [('Name', [task['name']]), ('Main Scope', task['scope']), ('Tuning KPI', task['kpi'])]
     dl = task['dlcs']
     if sims:
@@ -182,4 +180,29 @@ def jira_markup(task, M=None, sims=(), ty='WTGType', a='', b=''):
         txt = [f'{n} parameters depend on {ty}' + (f'; {len(diff)} differ between {a} and {b}: ' +
                                                    ', '.join(f'{p} {x}->{y}' for p, x, y in diff[:12]) if diff else '')]
         rows.append(('Type-dependent parameters', txt))
-    return '\n'.join(f'||{k}|{cell(v)}|' for k, v in rows)
+    return rows
+
+
+def jira_markup(task, M=None, sims=(), ty='WTGType', a='', b=''):
+    """Jira wiki table of the overview (gates omitted), ready to paste in an OVTASK."""
+    def cell(paras):
+        return ' \\\\ '.join(('* ' + strip(p[2:])) if p.startswith('- ') else strip(p) for p in paras).replace('|', '/')
+    return '\n'.join(f'||{k}|{cell(v)}|' for k, v in table_rows(task, M, sims, ty, a, b))
+
+
+def paras_text(paras):
+    """Plain text of a cell (bullets as '• ')."""
+    return '\n'.join(('• ' + strip(p[2:])) if p.startswith('- ') else strip(p) for p in paras)
+
+
+def paras_html(paras):
+    """HTML of one cell: '• ' bullets, **bold**, [P] as italic (proposed). Line breaks are <br> with
+    mso-data-placement:same-cell, so Excel keeps the whole field in ONE cell; OneNote / Word show the same lines."""
+    import html as _h
+    br = '<br style="mso-data-placement:same-cell">'
+
+    def inline(t):
+        t = _h.escape(t).replace('[P] ', '[P]')
+        t = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', t)
+        return t.replace('[P]', '<i style="color:#9A5B0B">(proposed)</i> ')
+    return br.join(('&#8226;&nbsp;' + inline(p[2:])) if p.startswith('- ') else inline(p) for p in paras)

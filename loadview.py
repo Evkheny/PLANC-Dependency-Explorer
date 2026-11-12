@@ -234,6 +234,8 @@ class LoadCaseWindow:
         self.rank.pack(fill='both', expand=True, pady=(4, 4))
         self.rank.bind('<<TreeviewSelect>>', lambda e: self.show_why())
         self.rank.bind('<Double-1>', lambda e: self.open_sel())
+        import clipboard_win
+        clipboard_win.bind_tree_copy(self.rank, lambda: 'What to tune first: ' + (self.centre_text()[0] if getattr(self, 'code', None) else ''))
         self.why = tk.Text(right, height=14, wrap='word', font=('Segoe UI', 9), relief='flat', background='#F7F9FA')
         self.why.pack(fill='x')
         ttk.Button(right, text='Open its tuning overview', command=self.open_sel).pack(anchor='e', pady=4)
