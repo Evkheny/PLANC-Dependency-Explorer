@@ -3,7 +3,8 @@ Usage: python tests/ui_smoke.py <out folder>   (needs pillow). Writes ui1.png (c
 ui2.png (values-per-type popup), ui3.png (STC1-emulated function with outside-model parameters), ui4.png (Tuning overview
 tab of RotorSpeedFilter with the DLCs of the project simulation, if one is configured), ui5.png (overview window opened from
 the centre box) ui6.png (Load cases window) and ui7.png (graph of tuning couplings), ui8.png (Load case view, DLC 1.4) and
-ui9.png (Load case view by load: tower fore-aft extreme)."""
+ui9.png (Load case view by load: tower fore-aft extreme) and
+ui10.png (OVTASK-113: feed-forward parameters only and block diagram of the Speed-Pitch Controller)."""
 import ctypes, ctypes.wintypes, os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -126,6 +127,21 @@ def s9():
 
 def s10():
     grab(lw.win, 'ui9.png')
+    lw.win.destroy()
+    app.navigate('SpeedPitchController')
+    ov = app.ov_main
+    ov.task.set(next(v for v in ov.cb['values'] if v.startswith('OVTASK-113')))
+    app.render_overview(ov)
+    app.follow_task(ov)
+    app.nb.select(1)
+    app.gmode.set('blocks')
+    app.blk_sys = None
+    app.show(app.sel, False)
+    app.after(1500, s11)
+
+
+def s11():
+    grab(app, 'ui10.png')
     app.destroy()
 
 

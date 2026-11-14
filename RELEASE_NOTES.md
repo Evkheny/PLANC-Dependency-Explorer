@@ -1,5 +1,17 @@
 # PLANC Dependency Explorer - Release notes
 
+## v1.5.0 (14-Nov-2026)
+
+### New
+- **Parameters per tuning task:** for functions tuned in several tasks (Speed-Pitch Controller, Speed-Power
+  Controller, Pitch Trajectory Tables, Pitch Trajectory Offsets, Speed Control Scheduler, Power Trajectory), the
+  Parameters tab shows only the parameters of the task selected in the Tuning overview, found inside the subsystems
+  that task tunes (e.g. OVTASK-113 Feed-Forward: the 7 feed-forward parameters instead of the 27 of the controller).
+  *Parameters of* switches to another task or to all the parameters.
+- **Graph: block diagram:** the inside of the function from its Simulink model: inputs, subsystems and blocks,
+  outputs and the lines between them; the subsystems of the selected tuning task are highlighted (e.g. the
+  feed-forward next to the gain scheduling and the PI controller). Double-click a subsystem to open it.
+
 ## v1.4.0 (12-Nov-2026)
 
 ### New

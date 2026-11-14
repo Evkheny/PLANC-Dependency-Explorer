@@ -6,7 +6,7 @@ parameters, type selections, owners and parameter values per type. Built only fr
 Optional: simulation folder(s) (only read): their load cases (DLCs) feed the tuning overview of each function and can be
 viewed and compared in the Load cases window.
 Run: python planc_explorer.py   (or the packaged PLANC_Dependency_Explorer.exe)"""
-import json, os, sys, threading, traceback, collections, textwrap
+import json, os, re, sys, threading, traceback, collections, textwrap
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
@@ -18,8 +18,9 @@ import dlcsetup  # noqa: E402
 import dlcview  # noqa: E402
 import loadview  # noqa: E402
 import clipboard_win  # noqa: E402
+import slx_struct  # noqa: E402
 
-__version__ = '1.4.0'
+__version__ = '1.5.0'
 APP = 'PLANC Dependency Explorer'
 DATA = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'PLANC_Dependency_Explorer')
 CFG = os.path.join(DATA, 'config.json')
@@ -57,6 +58,8 @@ class Explorer(tk.Tk):
         self.loaded = {}                                            # label -> dlcsetup.SimDlcs (shared with the DLC window)
         self.sim_msg = ''
         self.sim_err = {}
+        self.slx_cache = {}                                         # component -> slx_struct.Component (lazy)
+        self.blk_sys = None                                         # system shown in the block diagram
         self.build_ui()
         self.after(500, self.load_project_sim)
         if os.path.exists(CACHE):
@@ -191,9 +194,9 @@ class Explorer(tk.Tk):
         nav2.pack(fill='x', pady=(2, 0))
         ttk.Label(nav2, text='Graph:').pack(side='left')
         self.gmode = tk.StringVar(value='signals')
-        for v, lab in (('signals', 'signal links'), ('tuning', 'tuning couplings')):
+        for v, lab in (('signals', 'signal links'), ('tuning', 'tuning couplings'), ('blocks', 'block diagram')):
             ttk.Radiobutton(nav2, text=lab, value=v, variable=self.gmode,
-                            command=lambda: self.show(self.sel, False)).pack(side='left', padx=4)
+                            command=lambda: (setattr(self, 'blk_sys', None), self.show(self.sel, False))).pack(side='left', padx=4)
         self.ext = tk.BooleanVar(value=False)
         ttk.Checkbutton(nav2, text='show platform (STC1) inputs / unused outputs', variable=self.ext,
                         command=lambda: self.show(self.sel, False)).pack(side='right')
@@ -218,6 +221,21 @@ class Explorer(tk.Tk):
         self.t_par = self.table(right, 'Parameters', ('par', 'stc1', 'type', 'owner', 'a', 'b', 'min', 'max', 'unit', 'desc'),
                                 ('Parameter', 'STC1', 'Type sel.', 'Owner', 'Value A', 'Value B', 'Min', 'Max', 'Unit', 'Description'),
                                 (200, 75, 75, 105, 80, 80, 55, 55, 45, 300))
+        pf = self.t_par.master
+        for w in pf.grid_slaves():
+            info = w.grid_info()
+            w.grid(row=int(info['row']) + 1)
+        bar = ttk.Frame(pf, padding=(2, 2))
+        bar.grid(row=0, column=0, columnspan=2, sticky='we')
+        pf.rowconfigure(0, weight=0)
+        pf.rowconfigure(1, weight=1)
+        ttk.Label(bar, text='Parameters of').pack(side='left')
+        self.par_scope = tk.StringVar()
+        self.cb_scope = ttk.Combobox(bar, textvariable=self.par_scope, state='readonly', width=58)
+        self.cb_scope.pack(side='left', padx=4)
+        self.cb_scope.bind('<<ComboboxSelected>>', lambda e: self.fill_params(self.sel))
+        self.scope_lbl = ttk.Label(bar, foreground=MUTED)
+        self.scope_lbl.pack(side='left', padx=6)
         self.t_sig = self.table(right, 'Signals', ('dir', 'signal', 'peer', 'unit', 'desc'),
                                 ('In/Out', 'Signal (TDI)', 'Producer / consumers', 'Unit', 'Description'), (55, 190, 220, 50, 320))
         self.t_typ = self.table(right, 'Type selections', ('type', 'n', 'how'), ('Type selection', 'Parameters / use', 'How'),
@@ -446,6 +464,8 @@ class Explorer(tk.Tk):
         self.title_lbl.configure(text=f"{n}  ({c['short']})" + (f"   CD {sec}" if sec else ''))
         if self.gmode.get() == 'tuning':
             self.draw_tuning(n)
+        elif self.gmode.get() == 'blocks':
+            self.draw_blocks(n)
         else:
             self.draw(n)
         if details:
@@ -565,6 +585,210 @@ class Explorer(tk.Tk):
                        'requires re-tuning or re-checking B. Hover an arrow for the physical reason; click a box to navigate.',
                        fill=MUTED, font=('Segoe UI', 8), width=W - 20, justify='center')
 
+    # ------------------------------------------------------------------ task scope (parameters, block diagram)
+    def slx(self, n):
+        """slx_struct.Component of a function (read lazily from the PLANC folder; None if not readable)."""
+        if n not in self.slx_cache:
+            try:
+                ctrl = self.M['meta'].get('controller') or self.pvars['controller'].get()
+                self.slx_cache[n] = slx_struct.Component(os.path.join(ctrl, self.M['components'][n]['path']))
+            except Exception:                                   # noqa: BLE001 - model folder moved / not available
+                self.slx_cache[n] = None
+        return self.slx_cache[n]
+
+    def task_scope(self, n, task):
+        """(highlighted systems or None, parameter names, note) of a task inside function n."""
+        c = self.M['components'][n]
+        sib = overview.tasks_for(n)
+        if not task or task.get('comp') != n or len(sib) < 2 or not (task.get('subsystems') or task.get('rest')):
+            return None, list(c['parameters']), ''
+        comp = self.slx(n)
+        if comp is None:
+            return None, list(c['parameters']), 'model not readable: all parameters'
+        systems, pars = slx_struct.scope(comp, task, sib, c['parameters'])
+        pars = set(pars)
+        ex = task.get('extra')
+        if ex and ex.get('comp') in self.M['components']:
+            pars |= {p for p in self.M['components'][ex['comp']]['parameters'] if re.match(ex.get('param_re', ''), p)}
+        where = ', '.join(comp.path(x).split('/')[-1] for x in systems) if systems else ''
+        return systems, sorted(pars), (f'subsystems: {where}' if where else '')
+
+    def scope_choices(self, n):
+        sib = [t for t in overview.tasks_for(n) if t.get('subsystems') or t.get('rest')]
+        vals = [f'{n} (all parameters)'] + [f"{t['key']}  {t['name']}" for t in sib] if len(sib) > 1 else [n]
+        self.cb_scope['values'] = vals
+        cur = self.ov_task(self.ov_main)
+        pick = next((v for v in vals if cur and v.startswith(cur['key'] + ' ')), vals[0])
+        self.par_scope.set(pick)
+
+    def follow_task(self, ov):
+        if ov is self.ov_main and self.sel:
+            self.scope_choices(self.sel)
+            self.fill_params(self.sel)
+            if self.gmode.get() == 'blocks':
+                self.blk_sys = None
+                self.draw_blocks(self.sel)
+
+    def fill_params(self, n):
+        M = self.M
+        C, P = M['components'], M['parameters']
+        c = C[n]
+        sec = c.get('cd_section')
+        key = self.par_scope.get().split('  ')[0]
+        task = next((t for t in overview.tasks_for(n) if t['key'] == key), None)
+        _, pars, note = self.task_scope(n, task)
+        extra = (task or {}).get('extra') or {}
+        self.scope_lbl.configure(text=((f'{len(pars)} parameters' + (f' ({note}' if note else ' (') +
+                                        f"{'; ' if note else ''}incl. {extra['param_re'].strip('^')}* of {extra['comp']})")
+                                       if extra else f'{len(pars)} of {len(c["parameters"])} parameters' +
+                                       (f' ({note})' if note else '')) if task else f'{len(c["parameters"])} parameters')
+        t = self.t_par
+        t.delete(*t.get_children())
+        rows = sorted(pars, key=lambda p: (not self.differs(P.get(p, {})), P.get(p, {}).get('type') != self.ty.get(),
+                                           not P.get(p, {}).get('type'), p))
+        for p in rows:
+            v = P.get(p, {})
+            tags = (('typed',) if v.get('type') else ()) + (('diff',) if self.differs(v) else ())
+            t.insert('', 'end', iid='p:' + p, values=(p, v.get('mapping', ''), v.get('type', ''), v.get('owner', ''),
+                                                      self.pval(v, 'A'), self.pval(v, 'B'), v.get('min', ''), v.get('max', ''),
+                                                      v.get('unit', ''), (v.get('description', '') or '') +
+                                                      ('' if v.get('in_copad') else '  [not in the CoPaD export]')), tags=tags)
+        if c['kind'] == 'stc1' or not c['parameters']:
+            for p in sorted(self.outside_by_sec.get(sec, [])):
+                v = M['outside_model_params'][p]
+                tags = ('outside',) + (('diff',) if self.differs(v) else ())
+                t.insert('', 'end', iid='o:' + p, values=(p + '  (STC1)', v.get('mapping', ''), v.get('type', ''), v.get('owner', ''),
+                                                          self.pval(v, 'A'), self.pval(v, 'B'), v.get('min', ''), v.get('max', ''), '',
+                                                          f'Not in the Simulink model; documented in CD {sec}'), tags=tags)
+
+    def draw_blocks(self, n):
+        """Block diagram of one system of the function's .slx: inports (left), subsystems and blocks, outports (right).
+        The subsystems of the selected tuning task are highlighted; double-click a subsystem to open it."""
+        cv = self.cv
+        cv.delete('all')
+        comp = self.slx(n)
+        if comp is None or not comp.sys:
+            cv.create_text(20, 20, anchor='nw', fill=MUTED, font=('Segoe UI', 11),
+                           text='The .slx of this function cannot be read (check the PLANC folder in Sources).')
+            return
+        task = self.ov_task(self.ov_main)
+        hl, _, _ = self.task_scope(n, task)
+        hl = set(hl or [])
+        hl_all = {d for x in hl for d in comp.descendants(x)}
+        if self.blk_sys not in comp.sys:
+            self.blk_sys = comp.common_parent(list(hl)) if hl else comp.main_system()
+        sysn = self.blk_sys
+        nodes, edges = comp.diagram(sysn)
+        # layers: longest path from the inputs (back edges ignored)
+        succ = collections.defaultdict(list)
+        for a, b, _ in edges:
+            succ[a].append(b)
+        layer = {k: 0 for k, v in nodes.items() if v['kind'] == 'in'}
+        order = [k for k in nodes if k in layer] + [k for k in nodes if k not in layer]
+        for _ in range(len(nodes)):
+            changed = False
+            for a, b, _ in edges:
+                if a in layer and nodes[b]['kind'] != 'in':
+                    nl = layer[a] + 1
+                    if layer.get(b, -1) < nl <= len(nodes):
+                        layer[b] = nl
+                        changed = True
+            if not changed:
+                break
+        for k in order:
+            layer.setdefault(k, 1 if nodes[k]['kind'] != 'in' else 0)
+        last = max([layer[k] for k in nodes if nodes[k]['kind'] != 'out'] + [0]) + 1
+        for k, v in nodes.items():
+            if v['kind'] == 'out':
+                layer[k] = last
+        cols = collections.defaultdict(list)
+        for k in order:
+            cols[layer[k]].append(k)
+        W = max(cv.winfo_width(), 500)
+        ncol = max(cols) + 1
+        colw = (W - 30) / max(ncol, 1)
+        size = {'in': (colw - 22, 20), 'out': (colw - 22, 20), 'sub': (colw - 14, 52), 'blk': (min(colw - 30, 110), 24)}
+        pos, y0 = {}, 80
+        H = y0
+        preds = collections.defaultdict(list)
+        for a, b, _ in edges:
+            preds[b].append(a)
+
+        def place(ci, keys):
+            nonlocal H
+            y = y0
+            for k in keys:
+                w, h = size[nodes[k]['kind']]
+                pos[k] = (15 + ci * colw + (colw - w) / 2, y, w, h)
+                y += h + (18 if nodes[k]['kind'] == 'sub' else 7)
+            H = max(H, y)
+
+        def bary(k, nb):
+            ys = [pos[x][1] for x in nb if x in pos]
+            return sum(ys) / len(ys) if ys else 1e9
+        inner = [ci for ci in sorted(cols) if ci not in (0, last)]
+        for ci in inner:                                 # internal layers: order by the position of their inputs
+            place(ci, sorted(cols[ci], key=lambda k: bary(k, preds[k])))
+        place(0, sorted(cols.get(0, []), key=lambda k: bary(k, succ[k])))      # inports next to their consumers
+        place(last, sorted(cols.get(last, []), key=lambda k: bary(k, preds[k])))
+        for ci in inner:                                 # second pass with the inports placed
+            place(ci, sorted(cols[ci], key=lambda k: bary(k, preds[k])))
+        cv.configure(scrollregion=(0, 0, W, H + 60))
+        # header: breadcrumb
+        path = comp.path(sysn) or n
+        cv.create_text(15, 10, anchor='nw', text=f'{n}  /  {path}', font=('Segoe UI', 10, 'bold'), fill=INK, width=W - 30)
+        if sysn in comp.parent:
+            up = cv.create_text(15, 34, anchor='nw', text='▲ up one level', font=('Segoe UI', 9, 'underline'), fill=ACCENT)
+            cv.tag_bind(up, '<Button-1>', lambda e: (setattr(self, 'blk_sys', comp.parent[sysn][0]), self.draw_blocks(n)))
+        if task and hl:
+            cv.create_text(140, 34, anchor='nw', fill='#B9770E', font=('Segoe UI', 9, 'bold'), width=W - 160,
+                           text=f"orange = {task['key']} {task['name']}")
+        # edges first (under the boxes)
+        for a, b, lab in edges:
+            if a not in pos or b not in pos:
+                continue
+            xa, ya, wa, ha = pos[a]
+            xb, yb, wb, hb = pos[b]
+            hot = (nodes[a]['kind'] == 'sub' and self._sys_of(comp, sysn, a) in hl_all) or \
+                  (nodes[b]['kind'] == 'sub' and self._sys_of(comp, sysn, b) in hl_all)
+            col = '#B9770E' if hot else '#AAB7B8'
+            ln = cv.create_line(xa + wa, ya + ha / 2, xb, yb + hb / 2, arrow='last', fill=col, width=2 if hot else 1,
+                                smooth=True)
+            src = nodes[a]['name']
+            self.hover(ln, f"{src} -> {nodes[b]['name']}" + (f"\nport / signal: {lab}" if lab else ''))
+        for k, (x, y, w, h) in pos.items():
+            v = nodes[k]
+            if v['kind'] in ('in', 'out'):
+                r = cv.create_rectangle(x, y, x + w, y + h, fill='#EAF2F8' if v['kind'] == 'in' else '#E9F7EF',
+                                        outline='#7F8C8D')
+                nm = v['name'] if len(v['name']) * 6.2 < w - 6 else v['name'][:max(4, int((w - 6) / 6.2) - 1)] + '…'
+                t = cv.create_text(x + 4, y + h / 2, anchor='w', text=nm, font=('Consolas', 8), fill=INK)
+                self.hover(r, v['name'])
+            elif v['kind'] == 'sub':
+                ch = comp.child.get(k)
+                on = ch in hl_all
+                r = cv.create_rectangle(x, y, x + w, y + h, fill='#FDEBD0' if on else '#F4F6F7',
+                                        outline='#B9770E' if on else ACCENT, width=3 if on else 1.5)
+                t = cv.create_text(x + w / 2, y + h / 2, text=v['name'], fill=INK, width=w - 8, justify='center',
+                                   font=('Segoe UI', 9 if len(v['name']) * 7.5 < (w - 8) * 2 else 8, 'bold'))
+                for it in (r, t):
+                    cv.tag_bind(it, '<Double-1>', lambda e, ch=ch: (setattr(self, 'blk_sys', ch), self.draw_blocks(n)))
+                    cv.tag_bind(it, '<Enter>', lambda e: self.cv.configure(cursor='hand2'))
+                    cv.tag_bind(it, '<Leave>', lambda e: self.cv.configure(cursor=''))
+                pars = sorted(comp.params_in([ch], self.M['components'][n]['parameters'])) if ch else []
+                self.hover(r, v['name'] + ' (double-click to open)' + (f'\n{len(pars)} parameters: ' +
+                                                                      ', '.join(pars[:20]) if pars else ''))
+            else:
+                r = cv.create_rectangle(x, y, x + w, y + h, fill='#FBFCFC', outline='#BDC3C7')
+                t = cv.create_text(x + w / 2, y + h / 2, text=v['type'], font=('Segoe UI', 8), fill=MUTED, width=w - 4)
+                self.hover(r, f"{v['type']}: {v['name']}")
+        cv.create_text(W / 2, H + 30, fill=MUTED, font=('Segoe UI', 8), width=W - 30, justify='center', text=(
+            'Block diagram from the .slx (read only). Orange = subsystems of the selected tuning task (Tuning overview); '
+            'double-click a subsystem to open it, "up one level" to go back; hover a line for the port / signal.'))
+
+    def _sys_of(self, comp, sysn, sid):
+        return comp.child.get(sid)
+
     def box(self, x, y, w, h, name, c, centre=False):
         cv = self.cv
         col = SUBAREA_COL.get(c['subarea'], '#DDD')
@@ -616,25 +840,6 @@ class Explorer(tk.Tk):
         C, S, P = M['components'], M['signals'], M['parameters']
         c = C[n]
         sec = c.get('cd_section')
-        # parameters
-        t = self.t_par
-        t.delete(*t.get_children())
-        rows = sorted(c['parameters'], key=lambda p: (not self.differs(P.get(p, {})), P.get(p, {}).get('type') != self.ty.get(),
-                                                      not P.get(p, {}).get('type'), p))
-        for p in rows:
-            v = P.get(p, {})
-            tags = (('typed',) if v.get('type') else ()) + (('diff',) if self.differs(v) else ())
-            t.insert('', 'end', iid='p:' + p, values=(p, v.get('mapping', ''), v.get('type', ''), v.get('owner', ''),
-                                                      self.pval(v, 'A'), self.pval(v, 'B'), v.get('min', ''), v.get('max', ''),
-                                                      v.get('unit', ''), (v.get('description', '') or '') +
-                                                      ('' if v.get('in_copad') else '  [not in the CoPaD export]')), tags=tags)
-        if c['kind'] == 'stc1' or not c['parameters']:
-            for p in sorted(self.outside_by_sec.get(sec, [])):
-                v = M['outside_model_params'][p]
-                tags = ('outside',) + (('diff',) if self.differs(v) else ())
-                t.insert('', 'end', iid='o:' + p, values=(p + '  (STC1)', v.get('mapping', ''), v.get('type', ''), v.get('owner', ''),
-                                                          self.pval(v, 'A'), self.pval(v, 'B'), v.get('min', ''), v.get('max', ''), '',
-                                                          f'Not in the Simulink model; documented in CD {sec}'), tags=tags)
         # signals
         t = self.t_sig
         t.delete(*t.get_children())
@@ -660,6 +865,8 @@ class Explorer(tk.Tk):
             for ty in M['cd'][sec]['types']:
                 t.insert('', 'end', values=(ty, 'mentioned in the CD', f"Controller Description {sec}: |{ty}|"))
         self.fill_overview(self.ov_main, n)
+        self.scope_choices(n)
+        self.fill_params(n)
         # description
         own = ', '.join(f'{o}: {k}' for o, k in sorted(c['owners'].items(), key=lambda x: -x[1]))
         tx = self.txt
@@ -818,7 +1025,7 @@ class Explorer(tk.Tk):
         ov.task = tk.StringVar()
         ov.cb = ttk.Combobox(bar, textvariable=ov.task, state='readonly', width=46)
         ov.cb.pack(side='left', padx=4)
-        ov.cb.bind('<<ComboboxSelected>>', lambda e: self.render_overview(ov))
+        ov.cb.bind('<<ComboboxSelected>>', lambda e: (self.render_overview(ov), self.follow_task(ov)))
         ttk.Button(bar, text='Copy for Jira', command=lambda: self.copy_jira(ov)).pack(side='right')
         ttk.Button(bar, text='DLCs...', command=self.open_dlcs).pack(side='right', padx=4)
         f = ttk.Frame(parent)

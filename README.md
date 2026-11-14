@@ -66,12 +66,20 @@ Nothing else is needed. No Python is needed on the PC that runs the `.exe`.
    - **What to tune first** (right): ranking by relevance, whether the reason names that load, direct vs indirect action
      (estimators act through other functions) and monitors last (they protect, they do not reduce the load). Select a
      row for the reason and the mechanism; double-click (or click a box) opens its tuning overview.
-10. **Copy tables (right mouse button):** on the Parameters, Signals and Type selections tabs, the values-per-type
+10. **Functions with several tuning tasks** (Speed-Pitch Controller: PI / gain scheduling / High Speed Gain /
+    feed-forward; Speed-Power Controller; Pitch Trajectory Tables and Offsets; Speed Control Scheduler; Power
+    Trajectory): the **Parameters** tab shows only the parameters of the task selected in the Tuning overview (e.g.
+    OVTASK-113 Feed-Forward: the 7 parameters used inside `CalculateFeedForward`); *Parameters of* lets you pick another
+    task or all the parameters of the function.
+    **Graph: block diagram** draws the inside of the function from its `.slx`: inports left, subsystems and blocks,
+    outports right; the subsystems of the selected task in orange. Double-click a subsystem to open it, "up one level"
+    to go back, hover a line for the port / signal.
+11. **Copy tables (right mouse button):** on the Parameters, Signals and Type selections tabs, the values-per-type
     popup and the "What to tune first" ranking: *Copy selected rows* or *Copy whole table*. On the Tuning overview:
     *Copy overview as table* (one row per field, bullets and bold kept), *Copy selected text*, *Copy for Jira*. The
     clipboard gets an HTML table (Excel, OneNote, Word, Outlook paste a real table; Excel keeps each overview field in one
     cell) and tab-separated text.
-11. **Load cases (DLCs)**: the same window as SimStatsPlotter. It lists the load cases of a simulation (wind, speeds,
+12. **Load cases (DLCs)**: the same window as SimStatsPlotter. It lists the load cases of a simulation (wind, speeds,
    number of simulations, PSF, ULS/FLS use, events), opens the card of each load case, and compares simulations: new,
    removed and changed cases, and the template differences.
 
@@ -84,6 +92,7 @@ Settings, the model and the load-case cache (`dlccache`) are stored in `%APPDATA
 - `overview.py` builds the tuning overview from `tuning_kb.json`, the model and the load cases.
 - `clipboard_win.py` copies tables to the Windows clipboard as HTML + tab-separated text (ctypes, no extra package);
   `bind_tree_copy(tree, title)` adds the right-click menu to a Treeview.
+- `slx_struct.py` reads the structure of a component `.slx` (subsystem tree, blocks, lines, parameters per system).
 - `loadview.py` is the Load case view (logic: `affecting`, `affecting_load`; window: `LoadCaseWindow`).
 - `dlcsetup.py`, `dlcview.py`, `dlc_inputs.py`, `dlc_viewutil.py`, `screen_fit.py` are copied from SimStatsPlotter (load
   cases; keep them in sync). `slx_trace.py` traces where a signal is used inside a consumer.

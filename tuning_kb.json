@@ -1,5 +1,5 @@
 {
- "version": "2026-11-08",
+ "version": "2026-11-14",
  "note": "Tuning task overview knowledge base (Jira OVTASK overview rows, gates omitted). Curated by Turbine Control from the PLANC model, the Controller Description and CoPaD; text marked [P] is proposed and must be reviewed. Highly affected functionalities / by = tuning couplings (A -> B: changing the tunable parameters of A requires re-tuning or re-checking B), with the physical reason; not signal links.",
  "tasks": [
   {
@@ -78,7 +78,8 @@
    "risk": [
     "Sub-optimal curve: AEP loss. Too low pitch near rated: thrust peak, higher flap and tower loads, stall risk in turbulence. Wrong curtailed-speed curve: loads or AEP loss in curtailed operation."
    ],
-   "workflow": []
+   "workflow": [],
+   "rest": true
   },
   {
    "key": "OVTASK-292",
@@ -194,7 +195,14 @@
    ],
    "workflow": [
     "+Workflows/+ControllerTuning/+OperationalTrajectories/workflow_autoTune_PLBW.m"
-   ]
+   ],
+   "subsystems": [
+    "PitchTrajectoryOffsets/Offsets/Air density compensation and pitch limit by wind",
+    "PitchTrajectoryOffsets/Offsets/Merge",
+    "PitchTrajectoryOffsets/Offsets/Merge1",
+    "PitchTrajectoryOffsets/Offsets/PitchLimitByWindMonitor"
+   ],
+   "param_re": "^PLBW_"
   },
   {
    "key": "OVTASK-133",
@@ -686,7 +694,8 @@
    "risk": [
     "Too soft: speed deviations from the optimal tip-speed ratio (AEP loss), slow RSA window crossing. Too aggressive: torque fluctuations, drivetrain fatigue, grid flicker, interaction with ADTD2."
    ],
-   "workflow": []
+   "workflow": [],
+   "rest": true
   },
   {
    "key": "OVTASK-161",
@@ -721,7 +730,11 @@
    ],
    "workflow": [
     "+Workflows/+ControllerTuning/+SpeedControl/+SpdPwrCtr/workflow_SpdPwrGS.m"
-   ]
+   ],
+   "subsystems": [
+    "SpeedPowerController/SpeedPowerController/SpeedPowerController"
+   ],
+   "param_re": "^SpdPwr_GainSched"
   },
   {
    "key": "OVTASK-162",
@@ -974,6 +987,12 @@
    ],
    "workflow": [
     "+Workflows/+ControllerTuning/+SpeedControl/workflow_SpdPitGS.m, workflow_SpdPitGS_Step2.m"
+   ],
+   "subsystems": [
+    "CollectivePitchControl/SpeedPitchController/GainScheduling"
+   ],
+   "exclude": [
+    "CollectivePitchControl/SpeedPitchController/GainScheduling/HighSpeedGain"
    ]
   },
   {
@@ -1009,6 +1028,9 @@
    ],
    "workflow": [
     "+Workflows/+ControllerTuning/+SpeedControl/workflow_HighSpeedGain.m"
+   ],
+   "subsystems": [
+    "CollectivePitchControl/SpeedPitchController/GainScheduling/HighSpeedGain"
    ]
   },
   {
@@ -1044,6 +1066,9 @@
    ],
    "workflow": [
     "+Workflows/+ControllerTuning/+SpeedControl/workflow_feedForward.m"
+   ],
+   "subsystems": [
+    "CollectivePitchControl/SpeedPitchController/CalculateFeedForward"
    ]
   },
   {
@@ -1215,6 +1240,9 @@
    ],
    "workflow": [
     "+Workflows/+ControllerTuning/+OperationalTrajectories/workflow_OPCS.m"
+   ],
+   "subsystems": [
+    "PitchTrajectoryTables/OPCS"
    ]
   },
   {
@@ -1247,7 +1275,10 @@
    "risk": [
     "Start angle too low: high loads and possible overspeed during the run-up. Too high: slow or failed start-ups in low wind (availability)."
    ],
-   "workflow": []
+   "workflow": [],
+   "subsystems": [
+    "PitchTrajectoryOffsets/Offsets/OptimalStartAngleCalculation"
+   ]
   },
   {
    "key": "OVTASK-160",
@@ -1281,7 +1312,12 @@
    "risk": [
     "Wrong thresholds: hunting between the two controllers, power dips and speed peaks around rated, higher drivetrain and tower fatigue."
    ],
-   "workflow": []
+   "workflow": [],
+   "subsystems": [
+    "FullPowerStateMachine",
+    "BoostTypSwitching"
+   ],
+   "param_re": "^FPSM_"
   },
   {
    "key": "OVTASK-328",
@@ -1416,7 +1452,12 @@
    "risk": [
     "Shift too small: the two controllers interact (power and pitch oscillations around rated). Too large: speed deviations and AEP loss, overspeed margin reduced."
    ],
-   "workflow": []
+   "workflow": [],
+   "subsystems": [
+    "SpeedShifter",
+    "BoostTypSwitching"
+   ],
+   "param_re": "^SpdShift_"
   },
   {
    "key": "OVTASK-135",
@@ -1554,7 +1595,12 @@
    "risk": [
     "Sub-optimal curve: AEP loss; too high speeds in partial load: noise and loads."
    ],
-   "workflow": []
+   "workflow": [],
+   "rest": true,
+   "extra": {
+    "comp": "PowerTrajectory_Helper",
+    "param_re": "^SPC_"
+   }
   },
   {
    "key": "OVTASK-115",
@@ -1586,7 +1632,10 @@
    "risk": [
     "Wrong scaling: slow start-ups (availability), speed undershoot or torque transients at cut-in."
    ],
-   "workflow": []
+   "workflow": [],
+   "subsystems": [
+    "PowerTrajectory/CalculateSPCScalingFactor"
+   ]
   },
   {
    "key": "OVTASK-288",
@@ -2522,7 +2571,8 @@
     "+Workflows/+ControllerTuning/+SpeedControl/workflow_SpdPitCtr.m",
     "workflow_SpdPitGS.m, workflow_SpdPitGS_Step2.m",
     "workflow_HighSpeedGain.m, workflow_polePlacement.m, workflow_feedForward.m"
-   ]
+   ],
+   "rest": true
   },
   {
    "key": "OVTASK-127",
