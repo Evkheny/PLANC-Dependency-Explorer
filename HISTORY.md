@@ -4,7 +4,7 @@ Read together with `CLAUDE.md`. Section 0 is the current state; then the timelin
 knowledge and ideas.
 
 ## 0. Current state (14-Nov-2026)
-- **Version 1.5.0** (local commit, not pushed): parameters scoped to the tuning task for functions with several tasks
+- **Version 1.5.0** pushed to GitHub with tag `v1.5.0`, zip `release/PLANC_Dependency_Explorer_v1.5.0.zip` (the GitHub release is created by the user): parameters scoped to the tuning task for functions with several tasks
   (user: OVTASK-113 Feed-Forward showed all Speed-Pitch Controller parameters) and a block-diagram graph mode showing
   where the task's subsystems sit inside the function. Scopes in the project's `tools/tuning_sheets/task_scope.py`
   (checked: 113 → 7 parameters of CalculateFeedForward; 124 → 4 (HighSpeedGain); 125 → 7 (GainScheduling without HSG);
